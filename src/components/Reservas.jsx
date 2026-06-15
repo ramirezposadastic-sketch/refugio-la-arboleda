@@ -1,3 +1,4 @@
+import { supabase } from "../supabase";
 import { useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -91,7 +92,7 @@ function Reservas() {
   const reservaPermitida =
     noches <= 3 || noches === 0;
 
-  const enviarWhatsApp = () => {
+  const enviarWhatsApp = async () => {
     if (
       !nombre ||
       !identificacion ||
@@ -105,6 +106,38 @@ function Reservas() {
       alert("Por favor completa todos los campos.");
       return;
     }
+    try {
+
+  const { error } = await supabase
+    .from("reservas")
+    .insert([
+      {
+        nombre,
+        correo,
+        celular,
+        identificacion,
+        ocupacion,
+        residencia,
+        fecha_ingreso: ingreso.toISOString().split("T")[0],
+        fecha_salida: salida.toISOString().split("T")[0],
+        personas: Number(personas),
+        tipo_reserva: tipoReserva,
+        anticipo,
+        estado: "Pendiente",
+      },
+    ]);
+
+  if (error) {
+    console.error(error);
+    alert("Error guardando la reserva.");
+    return;
+  }
+
+} catch (err) {
+  console.error(err);
+  alert("Error de conexión con la base de datos.");
+  return;
+}
 
     if (noches > 3) {
       alert(
