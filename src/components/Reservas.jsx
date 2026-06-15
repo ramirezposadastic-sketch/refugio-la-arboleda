@@ -128,10 +128,10 @@ function Reservas() {
     ]);
 
   if (error) {
-    console.error(error);
-    alert("Error guardando la reserva.");
-    return;
-  }
+  console.error(error);
+  alert(JSON.stringify(error));
+  return;
+}
 
 } catch (err) {
   console.error(err);
