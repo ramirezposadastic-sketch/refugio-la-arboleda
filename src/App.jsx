@@ -9,7 +9,6 @@ import Actividades from "./components/Actividades";
 import Ubicacion from "./components/Ubicacion";
 import Footer from "./components/Footer";
 import { FaWhatsapp } from "react-icons/fa";
-
 function App() {
 
   return (
