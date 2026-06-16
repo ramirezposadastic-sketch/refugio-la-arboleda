@@ -1,5 +1,5 @@
 import { supabase } from "../supabase";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -14,16 +14,56 @@ function Reservas() {
   const [salida, setSalida] = useState(null);
   const [personas, setPersonas] = useState("1");
   const [tipoReserva, setTipoReserva] = useState("Entre semana");
+  const [fechasOcupadas, setFechasOcupadas] = useState([]);
 
-  const calcularNoches = () => {
-    if (!ingreso || !salida) return 0;
+useEffect(() => {
+  const cargarReservas = async () => {
+    const { data, error } = await supabase
+      .from("reservas")
+      .select("fecha_ingreso, fecha_salida");
 
-    const diferencia = salida.getTime() - ingreso.getTime();
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-    return Math.ceil(
-      diferencia / (1000 * 60 * 60 * 24)
-    );
+    console.log("Reservas:", data);
+
+    const fechas = [];
+
+    data.forEach((reserva) => {
+      const inicio = new Date(reserva.fecha_ingreso);
+      const fin = new Date(reserva.fecha_salida);
+
+      for (
+        let fecha = new Date(inicio);
+        fecha <= fin;
+        fecha.setDate(fecha.getDate() + 1)
+      ) {
+        fechas.push(new Date(fecha));
+      }
+    });
+
+    console.log("Fechas ocupadas:", fechas);
+
+    console.log("Reservas Supabase:", data);
+    console.log("Fechas generadas:", fechas);
+
+setFechasOcupadas(fechas);
   };
+
+  cargarReservas();
+}, []);
+
+const calcularNoches = () => {
+  if (!ingreso || !salida) return 0;
+
+  const diferencia = salida.getTime() - ingreso.getTime();
+
+  return Math.ceil(
+    diferencia / (1000 * 60 * 60 * 24)
+  );
+};
 
   const noches = calcularNoches();
 
@@ -264,12 +304,14 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
     <DatePicker
   selected={ingreso}
   onChange={(date) => setIngreso(date)}
+  filterDate={(date) =>
+  !fechasOcupadas.some(
+    (fecha) =>
+      fecha.toDateString() === date.toDateString()
+  )
+}
   dateFormat="dd/MM/yyyy"
   minDate={new Date()}
-  placeholderText="Ingreso"
-  className="datepicker"
-  popperPlacement="bottom-start"
-  portalId="root"
 />
   </div>
 
@@ -279,6 +321,12 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
     <DatePicker
   selected={salida}
   onChange={(date) => setSalida(date)}
+  filterDate={(date) =>
+  !fechasOcupadas.some(
+    (fecha) =>
+      fecha.toDateString() === date.toDateString()
+  )
+}
   dateFormat="dd/MM/yyyy"
   minDate={ingreso || new Date()}
   placeholderText="Salida"
