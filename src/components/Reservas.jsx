@@ -15,88 +15,65 @@ function Reservas() {
   const [personas, setPersonas] = useState("1");
   const [tipoReserva, setTipoReserva] = useState("Entre semana");
   const [fechasOcupadas, setFechasOcupadas] = useState([]);
+  const [cargando, setCargando] = useState(false);
 
-useEffect(() => {
-  const cargarReservas = async () => {
-    const { data, error } = await supabase
-      .from("reservas")
-      .select("fecha_ingreso, fecha_salida");
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-    const fechas = [];
-
-    data.forEach((reserva) => {
-      const inicio = new Date(reserva.fecha_ingreso);
-      const fin = new Date(reserva.fecha_salida);
-
-      for (
-        let fecha = new Date(inicio);
-        fecha <= fin;
-        fecha.setDate(fecha.getDate() + 1)
-      ) {
-        fechas.push(new Date(fecha));
-      }
-    });
-setFechasOcupadas(fechas);
+  // ✅ FIX 1: Parseo con hora local para evitar el desfase UTC-5
+  const parsearFechaLocal = (fechaStr) => {
+    if (!fechaStr) return null;
+    return new Date(fechaStr + "T00:00:00");
   };
 
-  cargarReservas();
-}, []);
+  useEffect(() => {
+    const cargarReservas = async () => {
+      const { data, error } = await supabase
+        .from("reservas")
+        .select("fecha_ingreso, fecha_salida");
 
-const calcularNoches = () => {
-  if (!ingreso || !salida) return 0;
+      if (error) {
+        console.error("Error cargando reservas:", error);
+        return;
+      }
 
-  const diferencia = salida.getTime() - ingreso.getTime();
+      const fechas = [];
 
-  return Math.ceil(
-    diferencia / (1000 * 60 * 60 * 24)
-  );
-};
+      data.forEach((reserva) => {
+        // ✅ FIX 2: Usar parseo local en vez de new Date("YYYY-MM-DD")
+        const inicio = parsearFechaLocal(reserva.fecha_ingreso);
+        const fin = parsearFechaLocal(reserva.fecha_salida);
+
+        if (!inicio || !fin) return; // Protección contra nulls en BD
+
+        for (
+          let fecha = new Date(inicio);
+          fecha <= fin;
+          fecha.setDate(fecha.getDate() + 1)
+        ) {
+          fechas.push(new Date(fecha));
+        }
+      });
+
+      setFechasOcupadas(fechas);
+    };
+
+    cargarReservas();
+  }, []);
+
+  const calcularNoches = () => {
+    if (!ingreso || !salida) return 0;
+    const diferencia = salida.getTime() - ingreso.getTime();
+    return Math.ceil(diferencia / (1000 * 60 * 60 * 24));
+  };
 
   const noches = calcularNoches();
-
-  let valorTotal = 0;
-
   const cantidadPersonas = Number(personas);
 
-  if (tipoReserva === "Entre semana") {
-    switch (cantidadPersonas) {
-      case 1:
-        valorTotal = 300000;
-        break;
-      case 2:
-        valorTotal = 420000;
-        break;
-      case 3:
-        valorTotal = 600000;
-        break;
-      case 4:
-        valorTotal = 780000;
-        break;
-      default:
-        valorTotal = 0;
-    }
-  } else {
-    switch (cantidadPersonas) {
-      case 1:
-        valorTotal = 600000;
-        break;
-      case 2:
-        valorTotal = 650000;
-        break;
-      case 3:
-        valorTotal = 890000;
-        break;
-      case 4:
-        valorTotal = 1130000;
-        break;
-      default:
-        valorTotal = 0;
-    }
-  }
+  // Tarifas por persona y tipo de reserva
+  const tarifas = {
+    "Entre semana":              { 1: 300000, 2: 420000, 3: 600000, 4: 780000 },
+    "Fin de semana / Festivo":   { 1: 600000, 2: 650000, 3: 890000, 4: 1130000 },
+  };
+
+  const valorTotal = tarifas[tipoReserva]?.[cantidadPersonas] ?? 0;
 
   const obtenerDescuento = () => {
     if (noches === 2) return 10;
@@ -105,23 +82,21 @@ const calcularNoches = () => {
   };
 
   const descuentoPorcentaje = obtenerDescuento();
+  const subtotal = noches > 0 ? valorTotal * noches : valorTotal;
+  const descuentoValor = subtotal * (descuentoPorcentaje / 100);
+  const totalFinal = subtotal - descuentoValor;
+  const anticipo = totalFinal / 2;
 
-  const subtotal =
-  noches > 0
-    ? valorTotal * noches
-    : valorTotal;
+  // ✅ FIX 3: También deshabilitar si no hay fechas seleccionadas
+  const reservaPermitida = noches > 0 && noches <= 3;
 
-  const descuentoValor =
-    subtotal * (descuentoPorcentaje / 100);
-
-  const totalFinal =
-    subtotal - descuentoValor;
-
-  const anticipo =
-    totalFinal / 2;
-
-  const reservaPermitida =
-    noches <= 3 || noches === 0;
+  const handleIngresoChange = (date) => {
+    setIngreso(date);
+    // Si la salida es anterior o igual al nuevo ingreso, resetearla
+    if (salida && date && salida <= date) {
+      setSalida(null);
+    }
+  };
 
   const enviarWhatsApp = async () => {
     if (
@@ -137,38 +112,6 @@ const calcularNoches = () => {
       alert("Por favor completa todos los campos.");
       return;
     }
-    try {
-
-  const { error } = await supabase
-    .from("reservas")
-    .insert([
-      {
-        nombre,
-        correo,
-        celular,
-        identificacion,
-        ocupacion,
-        residencia,
-        fecha_ingreso: ingreso.toISOString().split("T")[0],
-        fecha_salida: salida.toISOString().split("T")[0],
-        personas: Number(personas),
-        tipo_reserva: tipoReserva,
-        anticipo,
-        estado: "Pendiente",
-      },
-    ]);
-
-  if (error) {
-  console.error(error);
-  alert(JSON.stringify(error));
-  return;
-}
-
-} catch (err) {
-  console.error(err);
-  alert("Error de conexión con la base de datos.");
-  return;
-}
 
     if (noches > 3) {
       alert(
@@ -176,6 +119,41 @@ const calcularNoches = () => {
       );
       return;
     }
+
+    setCargando(true);
+
+    try {
+      const { error } = await supabase.from("reservas").insert([
+        {
+          nombre,
+          correo,
+          celular,
+          identificacion,
+          ocupacion,
+          residencia,
+          fecha_ingreso: ingreso.toISOString().split("T")[0],
+          fecha_salida: salida.toISOString().split("T")[0],
+          personas: cantidadPersonas,
+          tipo_reserva: tipoReserva,
+          anticipo,
+          estado: "Pendiente",
+        },
+      ]);
+
+      if (error) {
+        console.error("Error al guardar reserva:", error);
+        alert("No se pudo guardar la reserva. Intenta de nuevo.");
+        return;
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error de conexión con la base de datos.");
+      return;
+    } finally {
+      setCargando(false);
+    }
+
+    const fmt = (d) => d?.toLocaleDateString("es-CO");
 
     const mensaje = `
 REFUGIO LA ARBOLEDA
@@ -193,54 +171,32 @@ Celular: ${celular}
 
 DETALLES DE LA ESTADÍA
 
-Fecha de ingreso:
-${ingreso?.toLocaleDateString("es-CO")}
-
-Fecha de salida:
-${salida?.toLocaleDateString("es-CO")}
-
+Fecha de ingreso: ${fmt(ingreso)}
+Fecha de salida: ${fmt(salida)}
 Cantidad de personas: ${personas}
 Tipo de reserva: ${tipoReserva}
 Cantidad de noches: ${noches}
 
 VALORES
 
-Valor por noche:
-$${valorTotal.toLocaleString("es-CO")}
-
-Cantidad de noches:
-${noches}
-
-Subtotal:
-$${subtotal.toLocaleString("es-CO")}
-
-Descuento:
-${descuentoPorcentaje}%
-
-Valor descuento:
-$${descuentoValor.toLocaleString("es-CO")}
-
-Total:
-$${totalFinal.toLocaleString("es-CO")}
-
-Anticipo requerido (50%):
-$${anticipo.toLocaleString("es-CO")}
+Valor por noche: $${valorTotal.toLocaleString("es-CO")}
+Cantidad de noches: ${noches}
+Subtotal: $${subtotal.toLocaleString("es-CO")}
+Descuento: ${descuentoPorcentaje}%
+Valor descuento: $${descuentoValor.toLocaleString("es-CO")}
+Total: $${totalFinal.toLocaleString("es-CO")}
+Anticipo requerido (50%): $${anticipo.toLocaleString("es-CO")}
 
 IMPORTANTE:
 La reserva requiere confirmación mediante el pago del anticipo del 50%.
-`;
+`.trim();
 
-    const url = `https://wa.me/573136303649?text=${encodeURIComponent(
-      mensaje
-    )}`;
-
+    const url = `https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`;
     window.open(url, "_blank");
-    };
+  };
+
   return (
-    <section
-  id="reservas"
-  className="reservas"
->
+    <section id="reservas" className="reservas">
       <h2>Reserva tu Experiencia</h2>
 
       <form className="reserva-form">
@@ -250,35 +206,30 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
         />
-
         <input
           type="text"
           placeholder="Número de Identificación"
           value={identificacion}
           onChange={(e) => setIdentificacion(e.target.value)}
         />
-
         <input
           type="text"
           placeholder="Ocupación"
           value={ocupacion}
           onChange={(e) => setOcupacion(e.target.value)}
         />
-
         <input
           type="text"
           placeholder="Residencia"
           value={residencia}
           onChange={(e) => setResidencia(e.target.value)}
         />
-
         <input
           type="email"
           placeholder="Correo Electrónico"
           value={correo}
           onChange={(e) => setCorreo(e.target.value)}
         />
-
         <input
           type="text"
           placeholder="Celular"
@@ -286,106 +237,90 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
           onChange={(e) => setCelular(e.target.value)}
         />
 
+        {/* ✅ FIX 4: Estructura corregida con labels individuales */}
         <div className="fechas-grid">
+          <div>
+            <label>Fecha de ingreso</label>
+            <DatePicker
+              selected={ingreso}
+              onChange={handleIngresoChange}
+              dateFormat="dd/MM/yyyy"
+              minDate={new Date()}
+              placeholderText="Ingreso"
+              className="datepicker"
+              // ✅ FIX 5: excludeDates ahora SÍ se pasa al componente
+              excludeDates={fechasOcupadas}
+            />
+          </div>
 
-  <div>
-    <label>Fecha de ingreso</label>
+          <div>
+            <label>Fecha de salida</label>
+            <DatePicker
+              selected={salida}
+              onChange={(date) => setSalida(date)}
+              dateFormat="dd/MM/yyyy"
+              minDate={ingreso ? new Date(ingreso.getTime() + 86400000) : new Date()}
+              placeholderText="Salida"
+              className="datepicker"
+              excludeDates={fechasOcupadas}
+              disabled={!ingreso}
+            />
+          </div>
+        </div>
 
-    <DatePicker
-  selected={ingreso}
-  onChange={(date) => setIngreso(date)}
-  dateFormat="dd/MM/yyyy"
-  minDate={new Date()}
-  className="datepicker"
-    
-  />
-  </div>
-
-  <div>
-    <label>Fecha de salida</label>
-
-    <DatePicker
-  selected={salida}
-  onChange={(date) => setSalida(date)}
-  dateFormat="dd/MM/yyyy"
-  minDate={ingreso || new Date()}
-  placeholderText="Salida"
-  className="datepicker"
-/>
-  </div>
-
-</div>
         {noches > 0 && (
           <div className="info-noches">
             <strong>Noches:</strong> {noches}
           </div>
         )}
 
-        <select
-          value={personas}
-          onChange={(e) => setPersonas(e.target.value)}
-        >
+        <select value={personas} onChange={(e) => setPersonas(e.target.value)}>
           <option value="1">1 Persona</option>
           <option value="2">2 Personas</option>
           <option value="3">3 Personas</option>
           <option value="4">4 Personas</option>
         </select>
 
-        <select
-          value={tipoReserva}
-          onChange={(e) => setTipoReserva(e.target.value)}
-        >
-          <option value="Entre semana">
-            Entre semana
-          </option>
-
-          <option value="Fin de semana / Festivo">
-            Fin de semana / Festivo
-          </option>
+        <select value={tipoReserva} onChange={(e) => setTipoReserva(e.target.value)}>
+          <option value="Entre semana">Entre semana</option>
+          <option value="Fin de semana / Festivo">Fin de semana / Festivo</option>
         </select>
 
         <div className="precio-reserva">
+          <h2>Resumen de Reserva</h2>
 
-  <h2>Resumen de Reserva</h2>
+          <div className="linea-resumen">
+            <span>Valor por noche</span>
+            <span>${valorTotal.toLocaleString("es-CO")}</span>
+          </div>
+          <div className="linea-resumen">
+            <span>Noches</span>
+            <span>{noches}</span>
+          </div>
+          <div className="linea-resumen">
+            <span>Subtotal</span>
+            <span>${subtotal.toLocaleString("es-CO")}</span>
+          </div>
+          <div className="linea-resumen">
+            <span>Descuento</span>
+            <span>{descuentoPorcentaje}%</span>
+          </div>
+          <div className="linea-resumen">
+            <span>Ahorro</span>
+            <span>${descuentoValor.toLocaleString("es-CO")}</span>
+          </div>
 
-  <div className="linea-resumen">
-    <span>Valor por noche</span>
-    <span>${valorTotal.toLocaleString("es-CO")}</span>
-  </div>
+          <hr />
 
-  <div className="linea-resumen">
-    <span>Noches</span>
-    <span>{noches}</span>
-  </div>
-
-  <div className="linea-resumen">
-    <span>Subtotal</span>
-    <span>${subtotal.toLocaleString("es-CO")}</span>
-  </div>
-
-  <div className="linea-resumen">
-    <span>Descuento</span>
-    <span>{descuentoPorcentaje}%</span>
-  </div>
-
-  <div className="linea-resumen">
-    <span>Ahorro</span>
-    <span>${descuentoValor.toLocaleString("es-CO")}</span>
-  </div>
-
-  <hr />
-
-  <div className="linea-total">
-    <span>Total</span>
-    <span>${totalFinal.toLocaleString("es-CO")}</span>
-  </div>
-
-  <div className="linea-anticipo">
-    <span>Anticipo (50%)</span>
-    <span>${anticipo.toLocaleString("es-CO")}</span>
-  </div>
-
-</div>
+          <div className="linea-total">
+            <span>Total</span>
+            <span>${totalFinal.toLocaleString("es-CO")}</span>
+          </div>
+          <div className="linea-anticipo">
+            <span>Anticipo (50%)</span>
+            <span>${anticipo.toLocaleString("es-CO")}</span>
+          </div>
+        </div>
 
         {noches > 3 && (
           <div className="mensaje-error">
@@ -396,14 +331,12 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
         <button
           type="button"
           onClick={enviarWhatsApp}
-          disabled={!reservaPermitida}
+          disabled={!reservaPermitida || cargando}
         >
-          Reservar por WhatsApp
+          {cargando ? "Guardando..." : "Reservar por WhatsApp"}
         </button>
 
-        <p>
-          Para confirmar la reserva se solicita un anticipo del 50%.
-        </p>
+        <p>Para confirmar la reserva se solicita un anticipo del 50%.</p>
       </form>
     </section>
   );
