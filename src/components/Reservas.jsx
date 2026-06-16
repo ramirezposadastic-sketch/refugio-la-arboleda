@@ -135,8 +135,7 @@ La reserva se confirma con el pago del anticipo del 50%.
   console.log("personas =", personas);
   console.log("tipoReserva =", tipoReserva);
   console.log("valorNoche =", valorNoche);
-  
-  alert("VERSION NUEVA");
+  throw new Error("PRUEBA BRAYAN");
 
   return (
     <section id="reservas" className="reservas">
