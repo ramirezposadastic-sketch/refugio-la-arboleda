@@ -26,9 +26,6 @@ useEffect(() => {
       console.error(error);
       return;
     }
-
-    console.log("Reservas:", data);
-
     const fechas = [];
 
     data.forEach((reserva) => {
@@ -43,12 +40,6 @@ useEffect(() => {
         fechas.push(new Date(fecha));
       }
     });
-
-    console.log("Fechas ocupadas:", fechas);
-
-    console.log("Reservas Supabase:", data);
-    console.log("Fechas generadas:", fechas);
-
 setFechasOcupadas(fechas);
   };
 
@@ -244,8 +235,7 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
     )}`;
 
     window.open(url, "_blank");
-  };
-
+    };
   return (
     <section
   id="reservas"
@@ -304,15 +294,11 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
     <DatePicker
   selected={ingreso}
   onChange={(date) => setIngreso(date)}
-  filterDate={(date) =>
-  !fechasOcupadas.some(
-    (fecha) =>
-      fecha.toDateString() === date.toDateString()
-  )
-}
   dateFormat="dd/MM/yyyy"
   minDate={new Date()}
-/>
+  className="datepicker"
+    
+  />
   </div>
 
   <div>
@@ -321,18 +307,10 @@ La reserva requiere confirmación mediante el pago del anticipo del 50%.
     <DatePicker
   selected={salida}
   onChange={(date) => setSalida(date)}
-  filterDate={(date) =>
-  !fechasOcupadas.some(
-    (fecha) =>
-      fecha.toDateString() === date.toDateString()
-  )
-}
   dateFormat="dd/MM/yyyy"
   minDate={ingreso || new Date()}
   placeholderText="Salida"
   className="datepicker"
-  popperPlacement="bottom-start"
-  portalId="root"
 />
   </div>
 
