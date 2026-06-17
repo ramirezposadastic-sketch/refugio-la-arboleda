@@ -2,6 +2,10 @@ import { supabase } from "../supabase";
 import { useState, useEffect } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { registerLocale } from "react-datepicker";
+import { es } from "date-fns/locale";
+
+registerLocale("es", es);
 
 function Reservas() {
   const [nombre, setNombre] = useState("");
@@ -159,14 +163,38 @@ La reserva se confirma con el pago del anticipo del 50%.
   minDate={new Date()}
   className="datepicker"
   excludeDates={fechasOcupadas}
+  locale="es"
+  showPopperArrow={false}
+  fixedHeight
   dayClassName={(date) =>
     fechasOcupadas.some(
-      (fecha) =>
-        fecha.toDateString() === date.toDateString()
+      (fecha) => fecha.toDateString() === date.toDateString()
     )
       ? "dia-ocupado"
-      : "dia-disponible"
+      : ""
   }
+  renderCustomHeader={({
+    date,
+    decreaseMonth,
+    increaseMonth,
+  }) => (
+    <div className="calendar-header">
+      <button type="button" onClick={decreaseMonth}>
+        ‹
+      </button>
+
+      <span>
+        {date.toLocaleDateString("es-ES", {
+          month: "long",
+          year: "numeric",
+        })}
+      </span>
+
+      <button type="button" onClick={increaseMonth}>
+        ›
+      </button>
+    </div>
+  )}
 />
           </div>
           <div>
@@ -184,14 +212,38 @@ La reserva se confirma con el pago del anticipo del 50%.
   className="datepicker"
   excludeDates={fechasOcupadas}
   disabled={!ingreso}
+  locale="es"
+  showPopperArrow={false}
+  fixedHeight
   dayClassName={(date) =>
     fechasOcupadas.some(
-      (fecha) =>
-        fecha.toDateString() === date.toDateString()
+      (fecha) => fecha.toDateString() === date.toDateString()
     )
       ? "dia-ocupado"
-      : "dia-disponible"
+      : ""
   }
+  renderCustomHeader={({
+    date,
+    decreaseMonth,
+    increaseMonth,
+  }) => (
+    <div className="calendar-header">
+      <button type="button" onClick={decreaseMonth}>
+        ‹
+      </button>
+
+      <span>
+        {date.toLocaleDateString("es-ES", {
+          month: "long",
+          year: "numeric",
+        })}
+      </span>
+
+      <button type="button" onClick={increaseMonth}>
+        ›
+      </button>
+    </div>
+  )}
 />
           </div>
         </div>

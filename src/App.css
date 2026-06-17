@@ -762,3 +762,57 @@ button:hover {
   text-decoration: line-through;
   font-weight: 600;
 }
+/* HEADER */
+.calendar-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 15px;
+}
+
+.calendar-header button{
+  border:none;
+  background:none;
+  font-size:24px;
+  cursor:pointer;
+  color:#2e7d32;
+}
+
+.calendar-header span{
+  font-weight:600;
+  color:#2e7d32;
+  text-transform:capitalize;
+}
+
+/* QUITAR FLECHA */
+.react-datepicker__triangle{
+  display:none;
+}
+
+/* CONTENEDOR */
+.react-datepicker{
+  border:1px solid #dce5d5;
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+/* OCULTAR DIAS DE OTROS MESES */
+.react-datepicker__day--outside-month{
+  visibility:hidden;
+}
+
+/* DIA NORMAL */
+.react-datepicker__day{
+  border-radius:50%;
+}
+
+/* DIA DISPONIBLE */
+.react-datepicker__day:hover{
+  background:#e8f5e9;
+}
+
+/* DIA SELECCIONADO */
+.react-datepicker__day--selected{
+  background:#2e7d32 !important;
+}
