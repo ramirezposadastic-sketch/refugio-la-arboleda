@@ -40,13 +40,11 @@ function Reservas() {
     cargarReservas();
   }, []);
 
-  // ── Noches (directo, sin useMemo) ─────────────────────────────────
   let noches = 0;
   if (ingreso && salida) {
     noches = Math.ceil((salida - ingreso) / (1000 * 60 * 60 * 24));
   }
 
-  // ── Tarifa (switch original que SÍ funcionaba) ─────────────────────
   let valorNoche = 0;
   const p = parseInt(personas, 10);
 
@@ -62,7 +60,6 @@ function Reservas() {
     else if (p === 4) valorNoche = 1130000;
   }
 
-  // ── Totales ────────────────────────────────────────────────────────
   const descuentoPct = noches === 2 ? 10 : noches === 3 ? 15 : 0;
   const subtotal     = valorNoche * (noches > 0 ? noches : 1);
   const descuentoVal = subtotal * (descuentoPct / 100);
@@ -136,9 +133,7 @@ La reserva se confirma con el pago del anticipo del 50%.
 
     window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
   };
-  console.log("personas =", personas);
-  console.log("tipoReserva =", tipoReserva);
-  console.log("valorNoche =", valorNoche);
+
   return (
     <section id="reservas" className="reservas">
       <h2>Reserva tu Experiencia</h2>
@@ -156,95 +151,71 @@ La reserva se confirma con el pago del anticipo del 50%.
           <div>
             <label>Fecha de ingreso</label>
             <DatePicker
-  selected={ingreso}
-  onChange={handleIngresoChange}
-  dateFormat="dd/MM/yyyy"
-  placeholderText="Ingreso"
-  minDate={new Date()}
-  className="datepicker"
-  excludeDates={fechasOcupadas}
-  locale="es"
-  showPopperArrow={false}
-  fixedHeight
-  dayClassName={(date) =>
-    fechasOcupadas.some(
-      (fecha) => fecha.toDateString() === date.toDateString()
-    )
-      ? "dia-ocupado"
-      : ""
-  }
-  renderCustomHeader={({
-    date,
-    decreaseMonth,
-    increaseMonth,
-  }) => (
-    <div className="calendar-header">
-      <button type="button" onClick={decreaseMonth}>
-        ‹
-      </button>
-
-      <span>
-        {date.toLocaleDateString("es-ES", {
-          month: "long",
-          year: "numeric",
-        })}
-      </span>
-
-      <button type="button" onClick={increaseMonth}>
-        ›
-      </button>
-    </div>
-  )}
-/>
+              selected={ingreso}
+              onChange={handleIngresoChange}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="Ingreso"
+              minDate={new Date()}
+              className="datepicker"
+              excludeDates={fechasOcupadas}
+              locale="es"
+              showPopperArrow={false}
+              fixedHeight
+              dayClassName={(date) =>
+                fechasOcupadas.some(
+                  (fecha) => fecha.toDateString() === date.toDateString()
+                )
+                  ? "dia-ocupado"
+                  : ""
+              }
+              renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
+                <div className="calendar-header">
+                  <button type="button" onClick={decreaseMonth}>‹</button>
+                  <span>
+                    {date.toLocaleString("es-ES", { month: "long" })}{" "}
+                    {date.getFullYear()}
+                  </span>
+                  <button type="button" onClick={increaseMonth}>›</button>
+                </div>
+              )}
+            />
           </div>
           <div>
             <label>Fecha de salida</label>
             <DatePicker
-  selected={salida}
-  onChange={(d) => setSalida(d)}
-  dateFormat="dd/MM/yyyy"
-  placeholderText="Salida"
-  minDate={
-    ingreso
-      ? new Date(ingreso.getTime() + 86400000)
-      : new Date()
-  }
-  className="datepicker"
-  excludeDates={fechasOcupadas}
-  disabled={!ingreso}
-  locale="es"
-  showPopperArrow={false}
-  fixedHeight
-  dayClassName={(date) =>
-    fechasOcupadas.some(
-      (fecha) => fecha.toDateString() === date.toDateString()
-    )
-      ? "dia-ocupado"
-      : ""
-  }
-  renderCustomHeader={({
-    date,
-    decreaseMonth,
-    increaseMonth,
-  }) => (
-    <div className="calendar-header">
-      <button type="button" onClick={decreaseMonth}>
-        ‹
-      </button>
-
-      <span>
-        {date.toLocaleDateString("es-ES", {
-          month: "long",
-          year: "numeric",
-        })}
-      </span>
-
-      <button type="button" onClick={increaseMonth}>
-        ›
-      </button>
-    </div>
-  )}
-/>
+              selected={salida}
+              onChange={(d) => setSalida(d)}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="Salida"
+              minDate={
+                ingreso
+                  ? new Date(ingreso.getTime() + 86400000)
+                  : new Date()
+              }
+              className="datepicker"
+              excludeDates={fechasOcupadas}
+              disabled={!ingreso}
+              locale="es"
+              showPopperArrow={false}
+              fixedHeight
+              dayClassName={(date) =>
+                fechasOcupadas.some(
+                  (fecha) => fecha.toDateString() === date.toDateString()
+                )
+                  ? "dia-ocupado"
+                  : ""
+              }
+              renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
+                <div className="calendar-header">
+                  <button type="button" onClick={decreaseMonth}>‹</button>
+                  <span>
+                    {date.toLocaleString("es-ES", { month: "long" })}{" "}
+                    {date.getFullYear()}
+                  </span>
+                  <button type="button" onClick={increaseMonth}>›</button>
+                </div>
+              )}
+            />
           </div>
         </div>
 
