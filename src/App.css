@@ -754,3 +754,13 @@ button:hover {
 .contacto-info a:hover{
   color: #2e7d32;
 }
+.dia-ocupado {
+  background-color: #dc3545 !important;
+  color: white !important;
+  border-radius: 50%;
+}
+
+.dia-disponible:hover {
+  background-color: #198754 !important;
+  color: white !important;
+}

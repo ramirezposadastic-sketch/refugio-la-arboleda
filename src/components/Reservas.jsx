@@ -152,27 +152,47 @@ La reserva se confirma con el pago del anticipo del 50%.
           <div>
             <label>Fecha de ingreso</label>
             <DatePicker
-              selected={ingreso}
-              onChange={handleIngresoChange}
-              dateFormat="dd/MM/yyyy"
-              placeholderText="Ingreso"
-              minDate={new Date()}
-              className="datepicker"
-              excludeDates={fechasOcupadas}
-            />
+  selected={ingreso}
+  onChange={handleIngresoChange}
+  dateFormat="dd/MM/yyyy"
+  placeholderText="Ingreso"
+  minDate={new Date()}
+  className="datepicker"
+  excludeDates={fechasOcupadas}
+  dayClassName={(date) =>
+    fechasOcupadas.some(
+      (fecha) =>
+        fecha.toDateString() === date.toDateString()
+    )
+      ? "dia-ocupado"
+      : "dia-disponible"
+  }
+/>
           </div>
           <div>
             <label>Fecha de salida</label>
             <DatePicker
-              selected={salida}
-              onChange={(d) => setSalida(d)}
-              dateFormat="dd/MM/yyyy"
-              placeholderText="Salida"
-              minDate={ingreso ? new Date(ingreso.getTime() + 86400000) : new Date()}
-              className="datepicker"
-              excludeDates={fechasOcupadas}
-              disabled={!ingreso}
-            />
+  selected={salida}
+  onChange={(d) => setSalida(d)}
+  dateFormat="dd/MM/yyyy"
+  placeholderText="Salida"
+  minDate={
+    ingreso
+      ? new Date(ingreso.getTime() + 86400000)
+      : new Date()
+  }
+  className="datepicker"
+  excludeDates={fechasOcupadas}
+  disabled={!ingreso}
+  dayClassName={(date) =>
+    fechasOcupadas.some(
+      (fecha) =>
+        fecha.toDateString() === date.toDateString()
+    )
+      ? "dia-ocupado"
+      : "dia-disponible"
+  }
+/>
           </div>
         </div>
 
