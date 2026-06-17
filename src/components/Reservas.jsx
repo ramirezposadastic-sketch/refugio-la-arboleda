@@ -17,6 +17,7 @@ function Reservas() {
   const [ingreso, setIngreso] = useState(null);
   const [salida, setSalida] = useState(null);
   const [personas, setPersonas] = useState("1");
+  const [cabana, setCabana] = useState("");
   const [fechasOcupadas, setFechasOcupadas] = useState([]);
   const [cargando, setCargando] = useState(false);
 
@@ -81,7 +82,7 @@ if (ingreso) {
   };
 
   const enviarWhatsApp = async () => {
-    if (!nombre || !identificacion || !ocupacion || !residencia ||
+    if (!nombre || !identificacion || !ocupacion || !residencia || !cabana ||
         !correo  || !celular       || !ingreso   || !salida) {
       alert("Por favor completa todos los campos.");
       return;
@@ -93,7 +94,7 @@ if (ingreso) {
     setCargando(true);
     try {
       const { error } = await supabase.from("reservas").insert([{
-        nombre, correo, celular, identificacion, ocupacion, residencia,
+        nombre, correo, celular, identificacion, ocupacion, residencia, cabana,
         fecha_ingreso: ingreso.toISOString().split("T")[0],
         fecha_salida:  salida.toISOString().split("T")[0],
         personas: p,
@@ -119,6 +120,7 @@ Nombre: ${nombre}
 Identificación: ${identificacion}
 Ocupación: ${ocupacion}
 Residencia: ${residencia}
+Cabaña: ${cabana}
 Correo: ${correo}
 Celular: ${celular}
 
@@ -229,6 +231,19 @@ renderDayContents={(day, date) => {
 }}
             />
           </div>
+          <div className="cabana-box">
+  <label>🏡 Selecciona tu cabaña</label>
+
+  <select
+    className="cabana-select"
+    value={cabana}
+    onChange={(e) => setCabana(e.target.value)}
+  >
+    <option value="Cabaña 1">🏡 Cabaña 1</option>
+    <option value="Cabaña 2">🏡 Cabaña 2</option>
+    <option value="Cabaña 3">🏡 Cabaña 3</option>
+  </select>
+</div>
         </div>
 
         {noches > 0 && (
