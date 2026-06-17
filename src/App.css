@@ -755,18 +755,8 @@ button:hover {
   color: #2e7d32;
 }
 .dia-ocupado {
-  background-color: #dc3545 !important;
-  color: white !important;
-  border-radius: 50%;
-}
-
-.dia-disponible:hover {
-  background-color: #198754 !important;
-  color: white !important;
-}
-.dia-ocupado {
-  position: relative;
-  color: #999 !important;
+  background-color: #e5e5e5 !important;
+  color: #777 !important;
   text-decoration: line-through;
-  font-weight: bold;
+  border-radius: 50%;
 }
