@@ -764,8 +764,9 @@ button:hover {
   background-color: #198754 !important;
   color: white !important;
 }
-.react-datepicker__day--disabled {
-  background: red !important;
-  color: white !important;
-  border-radius: 50% !important;
+.dia-ocupado {
+  position: relative;
+  color: #999 !important;
+  text-decoration: line-through;
+  font-weight: bold;
 }
