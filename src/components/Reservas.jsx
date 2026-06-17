@@ -17,7 +17,6 @@ function Reservas() {
   const [ingreso, setIngreso] = useState(null);
   const [salida, setSalida] = useState(null);
   const [personas, setPersonas] = useState("1");
-  const [tipoReserva, setTipoReserva] = useState("semana");
   const [fechasOcupadas, setFechasOcupadas] = useState([]);
   const [cargando, setCargando] = useState(false);
 
@@ -47,6 +46,15 @@ function Reservas() {
 
   let valorNoche = 0;
   const p = parseInt(personas, 10);
+  let tipoReserva = "semana";
+
+if (ingreso) {
+  const dia = ingreso.getDay();
+
+  if (dia === 5 || dia === 6 || dia === 0) {
+    tipoReserva = "festivo";
+  }
+}
 
   if (tipoReserva === "semana") {
     if (p === 1) valorNoche = 300000;
@@ -162,22 +170,24 @@ La reserva se confirma con el pago del anticipo del 50%.
               showPopperArrow={false}
               fixedHeight
               dayClassName={(date) =>
-                fechasOcupadas.some(
-                  (fecha) => fecha.toDateString() === date.toDateString()
-                )
-                  ? "dia-ocupado"
-                  : ""
-              }
-              renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
-                <div className="calendar-header">
-                  <button type="button" onClick={decreaseMonth}>‹</button>
-                  <span>
-                    {date.toLocaleString("es-ES", { month: "long" })}{" "}
-                    {date.getFullYear()}
-                  </span>
-                  <button type="button" onClick={increaseMonth}>›</button>
-                </div>
-              )}
+  fechasOcupadas.some(
+    (fecha) => fecha.toDateString() === date.toDateString()
+  )
+    ? "dia-ocupado"
+    : "dia-disponible"
+}
+
+renderDayContents={(day, date) => {
+  const ocupado = fechasOcupadas.some(
+    (fecha) => fecha.toDateString() === date.toDateString()
+  );
+
+  return (
+    <span title={ocupado ? "Fecha ocupada" : ""}>
+      {day}
+    </span>
+  );
+}}
             />
           </div>
           <div>
@@ -199,22 +209,24 @@ La reserva se confirma con el pago del anticipo del 50%.
               showPopperArrow={false}
               fixedHeight
               dayClassName={(date) =>
-                fechasOcupadas.some(
-                  (fecha) => fecha.toDateString() === date.toDateString()
-                )
-                  ? "dia-ocupado"
-                  : ""
-              }
-              renderCustomHeader={({ date, decreaseMonth, increaseMonth }) => (
-                <div className="calendar-header">
-                  <button type="button" onClick={decreaseMonth}>‹</button>
-                  <span>
-                    {date.toLocaleString("es-ES", { month: "long" })}{" "}
-                    {date.getFullYear()}
-                  </span>
-                  <button type="button" onClick={increaseMonth}>›</button>
-                </div>
-              )}
+  fechasOcupadas.some(
+    (fecha) => fecha.toDateString() === date.toDateString()
+  )
+    ? "dia-ocupado"
+    : ""
+}
+
+renderDayContents={(day, date) => {
+  const ocupado = fechasOcupadas.some(
+    (fecha) => fecha.toDateString() === date.toDateString()
+  );
+
+  return (
+    <span title={ocupado ? "Fecha ocupada" : ""}>
+      {day}
+    </span>
+  );
+}}
             />
           </div>
         </div>
@@ -229,11 +241,14 @@ La reserva se confirma con el pago del anticipo del 50%.
           <option value="3">3 Personas</option>
           <option value="4">4 Personas</option>
         </select>
-
-        <select value={tipoReserva} onChange={(e) => setTipoReserva(e.target.value)}>
-          <option value="semana">Entre semana</option>
-          <option value="festivo">Fin de semana / Festivo</option>
-        </select>
+        <div className="tipo-reserva-auto">
+  Tipo de tarifa:
+  <strong>
+    {tipoReserva === "semana"
+      ? " Entre semana"
+      : " Fin de semana / Festivo"}
+  </strong>
+</div>
 
         <div className="precio-reserva">
           <h2>Resumen de Reserva</h2>
