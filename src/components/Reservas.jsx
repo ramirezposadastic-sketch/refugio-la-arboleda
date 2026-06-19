@@ -100,6 +100,7 @@ if (ingreso) {
         personas: p,
         tipo_reserva: tipoReserva === "semana" ? "Entre semana" : "Fin de semana / Festivo",
         anticipo,
+        total,
         estado: "Pendiente",
       }]);
       if (error) { alert("No se pudo guardar. Intenta de nuevo."); return; }
