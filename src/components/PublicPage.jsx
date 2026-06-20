@@ -1,3 +1,6 @@
+import { useEffect } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Experiencia from "./Experiencia";
@@ -11,6 +14,10 @@ import Footer from "./Footer";
 import { FaWhatsapp } from "react-icons/fa";
 
 function PublicPage() {
+  useEffect(() => {
+    AOS.init({ duration: 700, once: true });
+  }, []);
+
   return (
     <>
       <Navbar />

@@ -7,6 +7,31 @@ import { es } from "date-fns/locale";
 
 registerLocale("es", es);
 
+const ESTADOS_QUE_BLOQUEAN = ["Pendiente", "Confirmada"];
+
+const formatFechaLocal = (date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseFechaLocal = (fecha) => {
+  if (!fecha) return null;
+  const [year, month, day] = fecha.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const sumarDias = (date, dias) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate() + dias);
+
+const fechaLocalTime = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+const seCruzanRangos = (inicioA, salidaA, inicioB, salidaB) =>
+  fechaLocalTime(inicioA) < fechaLocalTime(salidaB) &&
+  fechaLocalTime(inicioB) < fechaLocalTime(salidaA);
+
 function Reservas() {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
@@ -18,27 +43,48 @@ function Reservas() {
   const [salida, setSalida] = useState(null);
   const [personas, setPersonas] = useState("1");
   const [cabana, setCabana] = useState("");
-  const [fechasOcupadas, setFechasOcupadas] = useState([]);
+  const [reservasBloqueantes, setReservasBloqueantes] = useState([]);
   const [cargando, setCargando] = useState(false);
 
+  const fechaEstaOcupada = (date) =>
+    reservasBloqueantes.some((r) => {
+      const inicio = parseFechaLocal(r.fecha_ingreso);
+      const fin = parseFechaLocal(r.fecha_salida);
+      return (
+        inicio &&
+        fin &&
+        fechaLocalTime(date) >= fechaLocalTime(inicio) &&
+        fechaLocalTime(date) < fechaLocalTime(fin)
+      );
+    });
+
+  const rangoEstaOcupado = (inicio, fin) =>
+    reservasBloqueantes.some((r) => {
+      const reservaInicio = parseFechaLocal(r.fecha_ingreso);
+      const reservaFin = parseFechaLocal(r.fecha_salida);
+      return (
+        reservaInicio &&
+        reservaFin &&
+        seCruzanRangos(inicio, fin, reservaInicio, reservaFin)
+      );
+    });
+
   useEffect(() => {
+    if (!cabana) {
+      return;
+    }
+
     const cargarReservas = async () => {
       const { data, error } = await supabase
         .from("reservas")
-        .select("fecha_ingreso, fecha_salida");
+        .select("fecha_ingreso, fecha_salida, cabana, estado")
+        .eq("cabana", cabana)
+        .in("estado", ESTADOS_QUE_BLOQUEAN);
       if (error) { console.error(error); return; }
-      const fechas = [];
-      data.forEach(({ fecha_ingreso, fecha_salida }) => {
-        const inicio = new Date(fecha_ingreso + "T00:00:00");
-        const fin    = new Date(fecha_salida   + "T00:00:00");
-        for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
-          fechas.push(new Date(d));
-        }
-      });
-      setFechasOcupadas(fechas);
+      setReservasBloqueantes(data || []);
     };
     cargarReservas();
-  }, []);
+  }, [cabana]);
 
   let noches = 0;
   if (ingreso && salida) {
@@ -74,11 +120,13 @@ if (ingreso) {
   const descuentoVal = subtotal * (descuentoPct / 100);
   const totalFinal   = subtotal - descuentoVal;
   const anticipo     = totalFinal / 2;
-  const reservaOk    = noches > 0 && noches <= 3;
+  const reservaOk    = Boolean(cabana) && noches > 0 && noches <= 3;
 
   const handleIngresoChange = (date) => {
     setIngreso(date);
-    if (salida && date && salida <= date) setSalida(null);
+    if (salida && date && (salida <= date || rangoEstaOcupado(date, salida))) {
+      setSalida(null);
+    }
   };
 
   const enviarWhatsApp = async () => {
@@ -91,20 +139,24 @@ if (ingreso) {
       alert("Para reservas superiores a 3 noches comunícate directamente con nuestro WhatsApp.");
       return;
     }
+    if (rangoEstaOcupado(ingreso, salida)) {
+      alert("La cabaña seleccionada no está disponible en ese rango de fechas.");
+      return;
+    }
     setCargando(true);
     try {
       const { error } = await supabase.from("reservas").insert([{
         nombre, correo, celular, identificacion, ocupacion, residencia, cabana,
-        fecha_ingreso: ingreso.toISOString().split("T")[0],
-        fecha_salida:  salida.toISOString().split("T")[0],
+        fecha_ingreso: formatFechaLocal(ingreso),
+        fecha_salida:  formatFechaLocal(salida),
         personas: p,
         tipo_reserva: tipoReserva === "semana" ? "Entre semana" : "Fin de semana / Festivo",
         anticipo,
-        total,
+        total: totalFinal,
         estado: "Pendiente",
       }]);
       if (error) { alert("No se pudo guardar. Intenta de nuevo."); return; }
-    } catch (e) {
+    } catch {
       alert("Error de conexión."); return;
     } finally {
       setCargando(false);
@@ -158,6 +210,25 @@ La reserva se confirma con el pago del anticipo del 50%.
         <input type="email" placeholder="Correo Electrónico"       value={correo}         onChange={(e) => setCorreo(e.target.value)} />
         <input type="text"  placeholder="Celular"                  value={celular}        onChange={(e) => setCelular(e.target.value)} />
 
+        <div className="cabana-box">
+          <label>🏡 Selecciona tu cabaña</label>
+
+          <select
+            className="cabana-select"
+            value={cabana}
+            onChange={(e) => {
+              setCabana(e.target.value);
+              setIngreso(null);
+              setSalida(null);
+            }}
+          >
+            <option value="">Selecciona una cabaña</option>
+            <option value="Cabaña 1">🏡 Cabaña 1</option>
+            <option value="Cabaña 2">🏡 Cabaña 2</option>
+            <option value="Cabaña 3">🏡 Cabaña 3</option>
+          </select>
+        </div>
+
         <div className="fechas-grid">
           <div>
             <label>Fecha de ingreso</label>
@@ -168,29 +239,19 @@ La reserva se confirma con el pago del anticipo del 50%.
               placeholderText="Ingreso"
               minDate={new Date()}
               className="datepicker"
-              excludeDates={fechasOcupadas}
+              filterDate={(date) => !fechaEstaOcupada(date)}
+              disabled={!cabana}
               locale="es"
               showPopperArrow={false}
               fixedHeight
               dayClassName={(date) =>
-  fechasOcupadas.some(
-    (fecha) => fecha.toDateString() === date.toDateString()
-  )
-    ? "dia-ocupado"
-    : "dia-disponible"
-}
-
-renderDayContents={(day, date) => {
-  const ocupado = fechasOcupadas.some(
-    (fecha) => fecha.toDateString() === date.toDateString()
-  );
-
-  return (
-    <span title={ocupado ? "Fecha ocupada" : ""}>
-      {day}
-    </span>
-  );
-}}
+                fechaEstaOcupada(date) ? "dia-ocupado" : "dia-disponible"
+              }
+              renderDayContents={(day, date) => (
+                <span title={fechaEstaOcupada(date) ? "Fecha ocupada" : ""}>
+                  {day}
+                </span>
+              )}
             />
           </div>
           <div>
@@ -202,49 +263,27 @@ renderDayContents={(day, date) => {
               placeholderText="Salida"
               minDate={
                 ingreso
-                  ? new Date(ingreso.getTime() + 86400000)
+                  ? sumarDias(ingreso, 1)
                   : new Date()
               }
               className="datepicker"
-              excludeDates={fechasOcupadas}
-              disabled={!ingreso}
+              filterDate={(date) =>
+                (!ingreso || !rangoEstaOcupado(ingreso, date))
+              }
+              disabled={!cabana || !ingreso}
               locale="es"
               showPopperArrow={false}
               fixedHeight
               dayClassName={(date) =>
-  fechasOcupadas.some(
-    (fecha) => fecha.toDateString() === date.toDateString()
-  )
-    ? "dia-ocupado"
-    : ""
-}
-
-renderDayContents={(day, date) => {
-  const ocupado = fechasOcupadas.some(
-    (fecha) => fecha.toDateString() === date.toDateString()
-  );
-
-  return (
-    <span title={ocupado ? "Fecha ocupada" : ""}>
-      {day}
-    </span>
-  );
-}}
+                ingreso && rangoEstaOcupado(ingreso, date) ? "dia-ocupado" : ""
+              }
+              renderDayContents={(day, date) => (
+                <span title={ingreso && rangoEstaOcupado(ingreso, date) ? "Rango no disponible" : ""}>
+                  {day}
+                </span>
+              )}
             />
           </div>
-          <div className="cabana-box">
-  <label>🏡 Selecciona tu cabaña</label>
-
-  <select
-    className="cabana-select"
-    value={cabana}
-    onChange={(e) => setCabana(e.target.value)}
-  >
-    <option value="Cabaña 1">🏡 Cabaña 1</option>
-    <option value="Cabaña 2">🏡 Cabaña 2</option>
-    <option value="Cabaña 3">🏡 Cabaña 3</option>
-  </select>
-</div>
         </div>
 
         {noches > 0 && (
