@@ -1,6 +1,24 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../supabase";
 
+const ESTADOS_QUE_BLOQUEAN = ["Pendiente", "Confirmada"];
+
+const parseFechaLocal = (fecha) => {
+  if (!fecha) return null;
+  const [year, month, day] = fecha.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const fechaLocalTime = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+
+const fechaLegible = (fecha) =>
+  parseFechaLocal(fecha)?.toLocaleDateString("es-CO") || "";
+
+const seCruzanRangos = (inicioA, salidaA, inicioB, salidaB) =>
+  fechaLocalTime(inicioA) < fechaLocalTime(salidaB) &&
+  fechaLocalTime(inicioB) < fechaLocalTime(salidaA);
+
 function Admin() {
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState("Todas");
@@ -9,11 +27,7 @@ function Admin() {
   const [reservaEditando, setReservaEditando] = useState(null);
   const [modoCrear, setModoCrear] = useState(false);
 
-  useEffect(() => {
-    cargarReservas();
-  }, []);
-
-  const cargarReservas = async () => {
+  async function cargarReservas() {
     const { data, error } = await supabase
       .from("reservas")
       .select("*")
@@ -25,7 +39,25 @@ function Admin() {
     }
 
     setReservas(data);
-  };
+  }
+
+  useEffect(() => {
+    const cargarInicial = async () => {
+      const { data, error } = await supabase
+        .from("reservas")
+        .select("*")
+        .order("fecha_ingreso", { ascending: true });
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setReservas(data);
+    };
+
+    cargarInicial();
+  }, []);
 
   const confirmarReserva = async (id) => {
     const { error } = await supabase
@@ -82,19 +114,55 @@ function Admin() {
   setMostrarModal(true);
 };
 const guardarEdicion = async () => {
+  const validarDisponibilidad = async () => {
+    const estado = reservaEditando.estado || "Pendiente";
+    if (!ESTADOS_QUE_BLOQUEAN.includes(estado)) return true;
+
+    const ingreso = parseFechaLocal(reservaEditando.fecha_ingreso);
+    const salida = parseFechaLocal(reservaEditando.fecha_salida);
+
+    if (!ingreso || !salida || salida <= ingreso) {
+      alert("Revisa las fechas de ingreso y salida.");
+      return false;
+    }
+
+    const { data, error } = await supabase
+      .from("reservas")
+      .select("id, fecha_ingreso, fecha_salida, cabana, estado")
+      .eq("cabana", reservaEditando.cabana || "Cabaña 1")
+      .in("estado", ESTADOS_QUE_BLOQUEAN);
+
+    if (error) {
+      console.error(error);
+      alert("No se pudo validar la disponibilidad.");
+      return false;
+    }
+
+    const existeCruce = (data || []).some((r) => {
+      if (!modoCrear && r.id === reservaEditando.id) return false;
+
+      const reservaInicio = parseFechaLocal(r.fecha_ingreso);
+      const reservaSalida = parseFechaLocal(r.fecha_salida);
+
+      return (
+        reservaInicio &&
+        reservaSalida &&
+        seCruzanRangos(ingreso, salida, reservaInicio, reservaSalida)
+      );
+    });
+
+    if (existeCruce) {
+      alert("La cabaña seleccionada no está disponible en ese rango de fechas.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const disponibilidadOk = await validarDisponibilidad();
+  if (!disponibilidadOk) return;
 
   if (modoCrear) {
-    console.log("DATOS A GUARDAR:");
-  console.log({
-    nombre: reservaEditando.nombre,
-    celular: reservaEditando.celular,
-    identificacion: Number(reservaEditando.identificacion || 0),
-    personas: Number(reservaEditando.personas || 1),
-    anticipo: Number(reservaEditando.anticipo || 0),
-    fecha_ingreso: reservaEditando.fecha_ingreso,
-    fecha_salida: reservaEditando.fecha_salida,
-  });
-
     const { error } = await supabase
   .from("reservas")
   .insert([
@@ -110,7 +178,7 @@ const guardarEdicion = async () => {
   ? Number(reservaEditando.personas)
   : 1,
       anticipo: Number(reservaEditando.anticipo || 0),
-      total: Number(reservaEditando.anticipo || 0) * 2,
+      total: Number(reservaEditando.total || 0),
       estado: reservaEditando.estado || "Pendiente",
       observaciones: reservaEditando.observaciones || "",
       pago_confirmado: reservaEditando.pago_confirmado || false,
@@ -159,7 +227,7 @@ const guardarEdicion = async () => {
 
     anticipo: Number(reservaEditando.anticipo || 0),
 
-    total: Number(reservaEditando.anticipo || 0) * 2,
+    total: Number(reservaEditando.total || 0),
   })
   .eq("id", reservaEditando.id);
 
@@ -217,7 +285,7 @@ const guardarEdicion = async () => {
     (r) => r.estado === "Cancelada"
   ).length;
   const dineroTotal = reservas.reduce(
-  (acc, r) => acc + ((r.anticipo || 0) * 2),
+  (acc, r) => acc + Number(r.total || 0),
   0
 );
 
@@ -344,15 +412,11 @@ setMostrarModal(true);
               <td>{r.celular}</td>
 
               <td>
-                {new Date(
-                  r.fecha_ingreso
-                ).toLocaleDateString("es-CO")}
+                {fechaLegible(r.fecha_ingreso)}
               </td>
 
               <td>
-                {new Date(
-                  r.fecha_salida
-                ).toLocaleDateString("es-CO")}
+                {fechaLegible(r.fecha_salida)}
               </td>
 
               <td>{r.personas}</td>
@@ -365,7 +429,7 @@ setMostrarModal(true);
               </td>
               <td>
                 $
-                {((r.anticipo || 0) * 2).toLocaleString("es-CO")}
+                {Number(r.total || 0).toLocaleString("es-CO")}
               </td>
               <td>
                 <span
@@ -529,6 +593,17 @@ setMostrarModal(true);
     setReservaEditando({
       ...reservaEditando,
       anticipo: e.target.value,
+    })
+  }
+/>
+<input
+  type="number"
+  placeholder="Total"
+  value={reservaEditando.total || 0}
+  onChange={(e) =>
+    setReservaEditando({
+      ...reservaEditando,
+      total: e.target.value,
     })
   }
 />
