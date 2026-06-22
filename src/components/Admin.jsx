@@ -14,6 +14,7 @@ import {
 const FILTRO_TODAS = "Todas";
 const FILTRO_TODOS = "Todos";
 const FILTRO_MES_ACTUAL = "Mes actual";
+const MENSAJE_SIN_PERMISOS = "No tienes permisos para realizar esta acción.";
 
 function AdminLogin({ onLogin }) {
   const [correo, setCorreo] = useState("");
@@ -117,6 +118,15 @@ function fechaLegible(fecha) {
   return new Date(`${fecha.slice(0, 10)}T00:00:00`).toLocaleDateString("es-CO");
 }
 
+function ordenarReservas(reservas) {
+  return [...reservas].sort((a, b) => {
+    const fechaA = a.fecha_ingreso || "";
+    const fechaB = b.fecha_ingreso || "";
+    if (fechaA !== fechaB) return fechaA.localeCompare(fechaB);
+    return String(a.id || "").localeCompare(String(b.id || ""));
+  });
+}
+
 function crearReservaVacia() {
   const hoy = fechaToISO(new Date());
 
@@ -185,6 +195,8 @@ function aplicarCalculoAutomatico(reserva) {
 function Admin() {
   const [session, setSession] = useState(null);
   const [verificandoSesion, setVerificandoSesion] = useState(true);
+  const [verificandoPermisos, setVerificandoPermisos] = useState(false);
+  const [adminAutorizado, setAdminAutorizado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState(FILTRO_TODAS);
   const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
@@ -195,21 +207,7 @@ function Admin() {
   const [reservaEditando, setReservaEditando] = useState(null);
   const [modoCrear, setModoCrear] = useState(false);
   const [valoresManuales, setValoresManuales] = useState(false);
-
-  const cargarReservas = async () => {
-    const { data, error } = await supabase
-      .from("reservas")
-      .select("*")
-      .order("fecha_ingreso", { ascending: true });
-
-    if (error) {
-      console.error(error);
-      alert("No se pudieron cargar las reservas.");
-      return;
-    }
-
-    setReservas(data || []);
-  };
+  const [accionEnProceso, setAccionEnProceso] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
@@ -217,12 +215,19 @@ function Admin() {
         console.error("Error verificando sesion:", error);
       }
 
+      setAdminAutorizado(null);
+      setVerificandoPermisos(Boolean(data.session));
+      setReservas([]);
       setSession(data.session || null);
       setVerificandoSesion(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nuevaSesion) => {
+      setAdminAutorizado(null);
+      setVerificandoPermisos(Boolean(nuevaSesion));
       setSession(nuevaSesion || null);
+      setMostrarModal(false);
+      setReservaEditando(null);
       if (!nuevaSesion) {
         setReservas([]);
       }
@@ -235,7 +240,55 @@ function Admin() {
   }, []);
 
   useEffect(() => {
-    if (!session) {
+    if (!session?.user) {
+      return;
+    }
+
+    supabase
+      .from("admin_users")
+      .select("id, user_id, email")
+      .eq("user_id", session.user.id)
+      .limit(1)
+      .then(async ({ data, error }) => {
+        if (error) {
+          console.error("Error verificando permisos de admin por user_id:", error);
+          setAdminAutorizado(false);
+          setReservas([]);
+          setVerificandoPermisos(false);
+          return;
+        }
+
+        if (data?.length > 0) {
+          setAdminAutorizado(true);
+          setVerificandoPermisos(false);
+          return;
+        }
+
+        const { data: emailData, error: emailError } = await supabase
+          .from("admin_users")
+          .select("id, user_id, email")
+          .eq("email", session.user.email)
+          .limit(1);
+
+        if (emailError) {
+          console.error("Error verificando permisos de admin por email:", emailError);
+          setAdminAutorizado(false);
+          setReservas([]);
+          setVerificandoPermisos(false);
+          return;
+        }
+
+        const autorizado = (emailData || []).length > 0;
+        setAdminAutorizado(autorizado);
+        if (!autorizado) {
+          setReservas([]);
+        }
+        setVerificandoPermisos(false);
+      });
+  }, [session]);
+
+  useEffect(() => {
+    if (!session || !adminAutorizado) {
       return;
     }
 
@@ -250,9 +303,18 @@ function Admin() {
           return;
         }
 
-        setReservas(data || []);
+        setReservas(ordenarReservas(data || []));
       });
-  }, [session]);
+  }, [session, adminAutorizado]);
+
+  const validarAdminAutorizado = () => {
+    if (adminAutorizado !== true) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return false;
+    }
+
+    return true;
+  };
 
   const validarReserva = (reserva, cambios = {}) => {
     const reservaFinal = { ...reserva, ...cambios };
@@ -315,57 +377,89 @@ function Admin() {
   };
 
   const confirmarReserva = async (reserva) => {
+    if (!validarAdminAutorizado()) return;
+
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), { estado: "Confirmada" });
     if (!reservaValidada) return;
 
-    const { error } = await supabase
+    setAccionEnProceso(reserva.id);
+
+    const { data, error } = await supabase
       .from("reservas")
       .update({ estado: "Confirmada" })
-      .eq("id", reserva.id);
+      .eq("id", reserva.id)
+      .select("*")
+      .single();
+
+    setAccionEnProceso(null);
 
     if (error) {
+      console.error("Error al confirmar reserva:", error);
       alert(error.message);
       return;
     }
 
-    cargarReservas();
+    setReservas((actuales) => actuales.map((item) => (item.id === reserva.id ? data : item)));
   };
 
   const confirmarPago = async (reserva) => {
+    if (!validarAdminAutorizado()) return;
+
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), {
       estado: "Confirmada",
       pago_confirmado: true,
     });
     if (!reservaValidada) return;
 
-    const { error } = await supabase
+    setAccionEnProceso(reserva.id);
+
+    const { data, error } = await supabase
       .from("reservas")
       .update({
         pago_confirmado: true,
         estado: "Confirmada",
       })
-      .eq("id", reserva.id);
+      .eq("id", reserva.id)
+      .select("*")
+      .single();
+
+    setAccionEnProceso(null);
 
     if (error) {
+      console.error("Error al marcar pago recibido:", error);
       alert(error.message);
       return;
     }
 
-    cargarReservas();
+    setReservas((actuales) => actuales.map((item) => (item.id === reserva.id ? data : item)));
   };
 
   const cancelarReserva = async (id) => {
-    const { error } = await supabase.from("reservas").update({ estado: "Cancelada" }).eq("id", id);
+    if (!validarAdminAutorizado()) return;
+
+    setAccionEnProceso(id);
+
+    const { data, error } = await supabase
+      .from("reservas")
+      .update({ estado: "Cancelada" })
+      .eq("id", id)
+      .select("*")
+      .single();
+
+    setAccionEnProceso(null);
 
     if (error) {
+      console.error("Error al cancelar reserva:", error);
       alert(error.message);
       return;
     }
 
-    cargarReservas();
+    setReservas((actuales) => actuales.map((item) => (item.id === id ? data : item)));
   };
 
   const editarReserva = (reserva) => {
+    if (!validarAdminAutorizado()) return;
+
     setModoCrear(false);
     setValoresManuales(true);
     setReservaEditando(normalizarReservaParaEditar(reserva));
@@ -373,6 +467,8 @@ function Admin() {
   };
 
   const nuevaReserva = () => {
+    if (!validarAdminAutorizado()) return;
+
     setModoCrear(true);
     setValoresManuales(false);
     setReservaEditando(aplicarCalculoAutomatico(crearReservaVacia()));
@@ -380,6 +476,8 @@ function Admin() {
   };
 
   const guardarEdicion = async () => {
+    if (!validarAdminAutorizado()) return;
+
     const reservaValidada = validarReserva(reservaEditando);
     if (!reservaValidada) return;
 
@@ -404,13 +502,18 @@ function Admin() {
       fecha_salida: reservaValidada.fecha_salida,
     };
 
-    const query = modoCrear
-      ? supabase.from("reservas").insert([payload])
-      : supabase.from("reservas").update(payload).eq("id", reservaValidada.id);
+    setAccionEnProceso("guardar");
 
-    const { error } = await query;
+    const query = modoCrear
+      ? supabase.from("reservas").insert([payload]).select("*").single()
+      : supabase.from("reservas").update(payload).eq("id", reservaValidada.id).select("*").single();
+
+    const { data, error } = await query;
+
+    setAccionEnProceso(null);
 
     if (error) {
+      console.error("Error al guardar reserva:", error);
       alert(error.message);
       return;
     }
@@ -418,10 +521,17 @@ function Admin() {
     setMostrarModal(false);
     setModoCrear(false);
     setValoresManuales(false);
-    cargarReservas();
+
+    if (modoCrear) {
+      setReservas((actuales) => ordenarReservas([...actuales, data]));
+    } else {
+      setReservas((actuales) => actuales.map((item) => (item.id === data.id ? data : item)));
+    }
   };
 
   const eliminarReserva = async (reserva) => {
+    if (!validarAdminAutorizado()) return;
+
     const id = reserva?.id;
 
     if (id === null || id === undefined || id === "") {
@@ -432,11 +542,15 @@ function Admin() {
 
     if (!window.confirm("Deseas eliminar esta reserva?")) return;
 
+    setAccionEnProceso(id);
+
     const { data, error } = await supabase
       .from("reservas")
       .delete()
       .eq("id", id)
       .select("id");
+
+    setAccionEnProceso(null);
 
     if (error) {
       console.error("Error al eliminar reserva:", error);
@@ -540,6 +654,8 @@ function Admin() {
   }, [reservas]);
 
   const exportarCsv = () => {
+    if (!validarAdminAutorizado()) return;
+
     const columnas = [
       "nombre",
       "celular",
@@ -603,6 +719,9 @@ function Admin() {
       return;
     }
 
+    setAdminAutorizado(null);
+    setVerificandoPermisos(false);
+    setAccionEnProceso(null);
     setSession(null);
     setReservas([]);
   };
@@ -616,7 +735,42 @@ function Admin() {
   }
 
   if (!session) {
-    return <AdminLogin onLogin={setSession} />;
+    return (
+      <AdminLogin
+        onLogin={(nuevaSesion) => {
+          setAdminAutorizado(null);
+          setVerificandoPermisos(Boolean(nuevaSesion));
+          setSession(nuevaSesion);
+        }}
+      />
+    );
+  }
+
+  if (verificandoPermisos || adminAutorizado === null) {
+    return (
+      <section className="admin">
+        <h2>Verificando permisos...</h2>
+      </section>
+    );
+  }
+
+  if (adminAutorizado !== true) {
+    return (
+      <section className="admin-login">
+        <div className="admin-login-card">
+          <div className="admin-login-brand">
+            <span>Refugio La Arboleda</span>
+            <h1>Panel Administrativo</h1>
+          </div>
+          <div className="admin-login-error">
+            No tienes permisos para acceder al panel administrativo.
+          </div>
+          <button type="button" onClick={cerrarSesion}>
+            Cerrar sesion
+          </button>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -730,11 +884,13 @@ function Admin() {
                 </td>
                 <td>
                   <div className="acciones acciones-admin">
-                    <button className="btn-confirmar" onClick={() => confirmarReserva(r)}>Confirmar</button>
-                    <button className="btn-pago" onClick={() => confirmarPago(r)}>Pago recibido</button>
-                    <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)}>Cancelar</button>
-                    <button className="btn-editar" onClick={() => editarReserva(r)}>Editar</button>
-                    <button className="btn-eliminar" onClick={() => eliminarReserva(r)}>Eliminar</button>
+                    <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>
+                    <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>
+                    <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>
+                    <button className="btn-editar" onClick={() => editarReserva(r)} disabled={accionEnProceso === r.id}>Editar</button>
+                    <button className="btn-eliminar" onClick={() => eliminarReserva(r)} disabled={accionEnProceso === r.id}>
+                      {accionEnProceso === r.id ? "Procesando..." : "Eliminar"}
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -800,7 +956,9 @@ function Admin() {
             </label>
 
             <div className="modal-botones">
-              <button className="btn-confirmar" onClick={guardarEdicion}>Guardar</button>
+              <button className="btn-confirmar" onClick={guardarEdicion} disabled={accionEnProceso === "guardar"}>
+                {accionEnProceso === "guardar" ? "Guardando..." : "Guardar"}
+              </button>
               <button className="btn-cancelar" onClick={() => setMostrarModal(false)}>Cancelar</button>
             </div>
           </div>

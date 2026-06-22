@@ -69,6 +69,12 @@ export function etiquetaTipoTarifa(tipoTarifa) {
   return tipoTarifa === "finDeSemana" ? "Fin de semana / Festivo" : "Entre semana";
 }
 
+export function calcularDescuentoPorNoches(noches) {
+  if (noches === 2) return 10;
+  if (noches === 3) return 15;
+  return 0;
+}
+
 export function calcularTarifaReserva({ adultos, ninosMenores, fechaIngreso, fechaSalida }) {
   const adultosNum = Math.max(1, Number(adultos || 1));
   const ninosNum = Math.max(0, Number(ninosMenores || 0));
@@ -100,9 +106,13 @@ export function calcularTarifaReserva({ adultos, ninosMenores, fechaIngreso, fec
   }
 
   const valorNoche = valorAdultos + valorNinos;
-  const total = valorNoche * (noches > 0 ? noches : 1);
+  const subtotalSinDescuento = valorNoche * (noches > 0 ? noches : 1);
+  const descuentoPorcentaje = noches > 0 ? calcularDescuentoPorNoches(noches) : 0;
+  const descuentoValor = Math.round(subtotalSinDescuento * (descuentoPorcentaje / 100));
+  const total = subtotalSinDescuento - descuentoValor;
   const anticipo = Math.round(total * PORCENTAJE_ANTICIPO);
   const saldoPendiente = total - anticipo;
+  const reservaLarga = noches > 3;
 
   return {
     adultos: adultosNum,
@@ -112,9 +122,13 @@ export function calcularTarifaReserva({ adultos, ninosMenores, fechaIngreso, fec
     tipoTarifa,
     tipoReserva: etiquetaTipoTarifa(tipoTarifa),
     valorNoche,
+    subtotalSinDescuento,
+    descuentoPorcentaje,
+    descuentoValor,
     total,
     anticipo,
     saldoPendiente,
+    reservaLarga,
     desglose,
   };
 }
