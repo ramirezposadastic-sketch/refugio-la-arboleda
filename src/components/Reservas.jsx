@@ -74,12 +74,10 @@ function Reservas() {
 
   useEffect(() => {
     const cargarReservas = async () => {
-      const { data, error } = await supabase
-        .from("reservas")
-        .select("id, cabana, fecha_ingreso, fecha_salida, estado");
+      const { data, error } = await supabase.rpc("obtener_reservas_disponibilidad");
 
       if (error) {
-        console.error(error);
+        console.error("No se pudo cargar la disponibilidad publica:", error);
         return;
       }
 
