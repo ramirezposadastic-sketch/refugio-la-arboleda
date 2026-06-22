@@ -15,6 +15,75 @@ const FILTRO_TODAS = "Todas";
 const FILTRO_TODOS = "Todos";
 const FILTRO_MES_ACTUAL = "Mes actual";
 
+function AdminLogin({ onLogin }) {
+  const [correo, setCorreo] = useState("");
+  const [password, setPassword] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [errorLogin, setErrorLogin] = useState("");
+
+  const iniciarSesion = async (event) => {
+    event.preventDefault();
+    setErrorLogin("");
+    setCargando(true);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: correo,
+      password,
+    });
+
+    setCargando(false);
+
+    if (error) {
+      console.error("Error de inicio de sesion:", error);
+      setErrorLogin(error.message || "No se pudo iniciar sesion. Revisa el correo y la contrasena.");
+      return;
+    }
+
+    onLogin(data.session);
+  };
+
+  return (
+    <section className="admin-login">
+      <form className="admin-login-card" onSubmit={iniciarSesion}>
+        <div className="admin-login-brand">
+          <span>Refugio La Arboleda</span>
+          <h1>Panel Administrativo</h1>
+        </div>
+
+        <label>
+          Correo
+          <input
+            type="email"
+            value={correo}
+            onChange={(e) => setCorreo(e.target.value)}
+            placeholder="admin@refugiolarboleda.com"
+            autoComplete="email"
+            required
+          />
+        </label>
+
+        <label>
+          Contrasena
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Tu contrasena"
+            autoComplete="current-password"
+            required
+          />
+        </label>
+
+        {errorLogin && <div className="admin-login-error">{errorLogin}</div>}
+
+        <button type="submit" disabled={cargando}>
+          {cargando ? "Iniciando..." : "Iniciar sesion"}
+        </button>
+      </form>
+    </section>
+  );
+}
+
 function valorTotal(reserva) {
   return Number(reserva.total ?? Number(reserva.anticipo || 0) * 2);
 }
@@ -114,6 +183,8 @@ function aplicarCalculoAutomatico(reserva) {
 }
 
 function Admin() {
+  const [session, setSession] = useState(null);
+  const [verificandoSesion, setVerificandoSesion] = useState(true);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState(FILTRO_TODAS);
   const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
@@ -141,6 +212,33 @@ function Admin() {
   };
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error("Error verificando sesion:", error);
+      }
+
+      setSession(data.session || null);
+      setVerificandoSesion(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nuevaSesion) => {
+      setSession(nuevaSesion || null);
+      if (!nuevaSesion) {
+        setReservas([]);
+      }
+      setVerificandoSesion(false);
+    });
+
+    return () => {
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
     supabase
       .from("reservas")
       .select("*")
@@ -154,7 +252,7 @@ function Admin() {
 
         setReservas(data || []);
       });
-  }, []);
+  }, [session]);
 
   const validarReserva = (reserva, cambios = {}) => {
     const reservaFinal = { ...reserva, ...cambios };
@@ -496,6 +594,31 @@ function Admin() {
   const dineroTotal = reservasNoCanceladas.reduce((acc, r) => acc + valorTotal(r), 0);
   const anticiposTotales = reservasNoCanceladas.reduce((acc, r) => acc + valorAnticipo(r), 0);
 
+  const cerrarSesion = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Error al cerrar sesion:", error);
+      alert(error.message || "No se pudo cerrar sesion.");
+      return;
+    }
+
+    setSession(null);
+    setReservas([]);
+  };
+
+  if (verificandoSesion) {
+    return (
+      <section className="admin">
+        <h2>Cargando panel...</h2>
+      </section>
+    );
+  }
+
+  if (!session) {
+    return <AdminLogin onLogin={setSession} />;
+  }
+
   return (
     <section className="admin">
       <div className="admin-header">
@@ -503,7 +626,10 @@ function Admin() {
           <h2>Panel de Reservas</h2>
           <p>Gestion de disponibilidad, pagos y reportes.</p>
         </div>
-        <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>
+        <div className="admin-header-actions">
+          <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>
+          <button className="btn-salir" onClick={cerrarSesion}>Cerrar sesion</button>
+        </div>
       </div>
 
       <div className="admin-stats admin-stats-profesional">
