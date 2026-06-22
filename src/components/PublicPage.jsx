@@ -9,6 +9,7 @@ import Tarifas from "./Tarifas";
 import Actividades from "./Actividades";
 import Ubicacion from "./Ubicacion";
 import Reservas from "./Reservas";
+import Terminos from "./Terminos";
 import Contacto from "./Contacto";
 import Footer from "./Footer";
 import { FaWhatsapp } from "react-icons/fa";
@@ -28,6 +29,7 @@ function PublicPage() {
       <Actividades />
       <Ubicacion />
       <Reservas />
+      <Terminos />
       <Contacto />
 
       <a
