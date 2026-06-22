@@ -323,17 +323,36 @@ function Admin() {
     cargarReservas();
   };
 
-  const eliminarReserva = async (id) => {
-    if (!window.confirm("Deseas eliminar esta reserva?")) return;
+  const eliminarReserva = async (reserva) => {
+    const id = reserva?.id;
 
-    const { error } = await supabase.from("reservas").delete().eq("id", id);
-
-    if (error) {
-      alert(error.message);
+    if (id === null || id === undefined || id === "") {
+      console.error("No se puede eliminar la reserva porque no tiene un id valido.", reserva);
+      alert("No se puede eliminar esta reserva porque no tiene un id valido.");
       return;
     }
 
-    cargarReservas();
+    if (!window.confirm("Deseas eliminar esta reserva?")) return;
+
+    const { data, error } = await supabase
+      .from("reservas")
+      .delete()
+      .eq("id", id)
+      .select("id");
+
+    if (error) {
+      console.error("Error al eliminar reserva:", error);
+      alert(`No se pudo eliminar la reserva: ${error.message}`);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.error("Supabase no elimino ninguna reserva para el id:", id);
+      alert("No se elimino ninguna reserva. Revisa permisos de Supabase o que la reserva exista.");
+      return;
+    }
+
+    setReservas((actuales) => actuales.filter((item) => item.id !== id));
   };
 
   const actualizarCampoReserva = (campo, valor) => {
@@ -589,7 +608,7 @@ function Admin() {
                     <button className="btn-pago" onClick={() => confirmarPago(r)}>Pago recibido</button>
                     <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)}>Cancelar</button>
                     <button className="btn-editar" onClick={() => editarReserva(r)}>Editar</button>
-                    <button className="btn-eliminar" onClick={() => eliminarReserva(r.id)}>Eliminar</button>
+                    <button className="btn-eliminar" onClick={() => eliminarReserva(r)}>Eliminar</button>
                   </div>
                 </td>
               </tr>
