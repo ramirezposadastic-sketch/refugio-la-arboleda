@@ -1731,3 +1731,927 @@ button:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================
+   RESPONSIVE FINAL - PULIDO VISUAL
+   ========================================= */
+body {
+  background: #ffffff;
+  color: #33402f;
+  overflow-x: hidden;
+}
+
+* {
+  letter-spacing: 0;
+}
+
+.navbar,
+.hero,
+.experiencia,
+.cabaÃ±as,
+.tarifas,
+.actividades,
+.ubicacion,
+.reservas,
+.terminos,
+.contacto,
+.footer {
+  width: 100%;
+}
+
+.experiencia-grid,
+.cabaÃ±as-grid,
+.tarifas-grid,
+.actividades-grid,
+.terminos-contenido,
+.contacto-info,
+.ubicacion p,
+.hero-content {
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.navbar {
+  position: relative;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.logo {
+  line-height: 1.15;
+}
+
+.nav-links {
+  align-items: center;
+  row-gap: 10px;
+}
+
+.nav-links a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+}
+
+.hero {
+  min-height: 560px;
+  height: auto;
+  padding: 110px 24px 96px;
+}
+
+.hero h1,
+.experiencia h2,
+.cabaÃ±as h2,
+.tarifas h2,
+.actividades h2,
+.ubicacion h2,
+.reservas h2,
+.terminos h2,
+.contacto h2 {
+  line-height: 1.12;
+}
+
+.hero-buttons {
+  flex-wrap: wrap;
+}
+
+.btn-reservar,
+.btn-whatsapp,
+.ubicacion a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+}
+
+.btn-whatsapp {
+  background: #ffffff;
+  color: #2e7d32;
+}
+
+.experiencia-grid,
+.cabaÃ±as-grid,
+.actividades-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.card,
+.cabaÃ±a-card,
+.actividad-card,
+.tarifa-card,
+.termino-card {
+  border: 1px solid #edf1ec;
+  border-radius: 12px;
+}
+
+.tarifa-card {
+  flex: 1 1 280px;
+  max-width: 360px;
+}
+
+.reserva-form {
+  width: min(760px, 100%);
+}
+
+.reserva-form input,
+.reserva-form select,
+.datepicker,
+.cabana-select {
+  min-height: 48px;
+}
+
+.fechas-grid,
+.huespedes-grid,
+.modal-grid {
+  align-items: start;
+}
+
+.linea-resumen,
+.linea-total,
+.linea-anticipo,
+.linea-saldo {
+  gap: 14px;
+}
+
+.linea-resumen span:first-child,
+.linea-total span:first-child,
+.linea-anticipo span:first-child,
+.linea-saldo span:first-child {
+  text-align: left;
+}
+
+.linea-resumen span:last-child,
+.linea-total span:last-child,
+.linea-anticipo span:last-child,
+.linea-saldo span:last-child,
+.linea-resumen strong {
+  text-align: right;
+}
+
+.react-datepicker-popper {
+  max-width: calc(100vw - 24px) !important;
+}
+
+.react-datepicker {
+  max-width: calc(100vw - 32px);
+}
+
+.react-datepicker__month-container {
+  height: auto;
+}
+
+.react-datepicker__header {
+  padding: 0;
+  border-bottom: 1px solid #ebf1e8;
+}
+
+.react-datepicker__day-names {
+  padding-bottom: 2px;
+}
+
+.react-datepicker__month {
+  margin: 0;
+  padding-bottom: 10px;
+  min-height: 0;
+}
+
+.react-datepicker__week {
+  min-height: 0;
+}
+
+.react-datepicker__week:empty,
+.react-datepicker__week:has(.react-datepicker__day--outside-month:nth-child(7)):not(:has(.react-datepicker__day:not(.react-datepicker__day--outside-month))) {
+  display: none;
+}
+
+.react-datepicker__day--outside-month {
+  visibility: hidden;
+}
+
+.terminos-grid {
+  align-items: stretch;
+}
+
+.termino-card {
+  display: grid;
+  align-content: start;
+}
+
+.contacto-info {
+  max-width: 680px;
+}
+
+.contacto-info p {
+  overflow-wrap: anywhere;
+}
+
+.whatsapp-float {
+  touch-action: manipulation;
+}
+
+.admin {
+  width: min(100%, 1440px);
+}
+
+.admin-header-actions,
+.admin-toolbar,
+.modal-botones {
+  min-width: 0;
+}
+
+.admin button,
+.admin-login-card button,
+.modal-editar button {
+  min-height: 40px;
+  touch-action: manipulation;
+}
+
+.admin-tabla-wrapper {
+  scrollbar-width: thin;
+}
+
+.admin-tabla-wrapper::-webkit-scrollbar {
+  height: 10px;
+}
+
+.admin-tabla-wrapper::-webkit-scrollbar-thumb {
+  background: #c8d5c5;
+  border-radius: 999px;
+}
+
+.modal-overlay {
+  padding: 18px;
+}
+
+.modal-editar {
+  width: min(820px, 100%);
+}
+
+@media (max-width: 1100px) {
+  .navbar {
+    padding: 18px 28px;
+  }
+
+  .experiencia,
+  .cabaÃ±as,
+  .tarifas,
+  .reservas,
+  .terminos,
+  .contacto,
+  .actividades,
+  .ubicacion {
+    padding: 72px 32px;
+  }
+
+  .experiencia-grid,
+  .cabaÃ±as-grid,
+  .actividades-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin {
+    margin: 0;
+    max-width: none;
+    padding: 24px;
+  }
+
+  .admin-stats-profesional {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-reportes {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    align-items: flex-start;
+    padding: 16px 18px;
+  }
+
+  .logo {
+    width: 100%;
+    text-align: center;
+    font-size: 1.35rem;
+  }
+
+  .nav-links {
+    width: 100%;
+    gap: 8px;
+    font-size: 0.92rem;
+  }
+
+  .nav-links a {
+    min-height: 34px;
+    padding: 0 4px;
+  }
+
+  .hero {
+    min-height: 0;
+    padding: 72px 20px 64px;
+  }
+
+  .hero h1 {
+    font-size: 40px;
+  }
+
+  .hero p {
+    max-width: 520px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-buttons {
+    align-items: stretch;
+    width: min(360px, 100%);
+    margin: 0 auto;
+  }
+
+  .btn-reservar,
+  .btn-whatsapp {
+    width: 100%;
+  }
+
+  .experiencia h2,
+  .cabaÃ±as h2,
+  .tarifas h2,
+  .actividades h2,
+  .ubicacion h2,
+  .reservas h2,
+  .terminos h2,
+  .contacto h2 {
+    font-size: 32px;
+    margin-bottom: 28px;
+  }
+
+  .experiencia-grid,
+  .cabaÃ±as-grid,
+  .actividades-grid {
+    gap: 18px;
+  }
+
+  .card,
+  .cabaÃ±a-card,
+  .actividad-card,
+  .tarifa-card,
+  .termino-card {
+    padding: 22px;
+  }
+
+  .tarifa-card {
+    width: 100%;
+    max-width: none;
+  }
+
+  .reserva-form {
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(0,0,0,.07);
+    gap: 12px;
+  }
+
+  .reserva-form input,
+  .reserva-form select,
+  .datepicker {
+    margin-bottom: 10px;
+    padding: 13px 14px;
+  }
+
+  .cabana-box,
+  .precio-reserva,
+  .resumen-disponibilidad,
+  .terminos-check {
+    border-radius: 14px;
+  }
+
+  .linea-resumen,
+  .linea-total,
+  .linea-anticipo,
+  .linea-saldo {
+    align-items: flex-start;
+  }
+
+  .precio-reserva h2 {
+    font-size: 1.45rem;
+    margin-bottom: 14px;
+  }
+
+  .linea-total {
+    font-size: 20px;
+  }
+
+  .react-datepicker {
+    width: min(312px, calc(100vw - 48px));
+  }
+
+  .react-datepicker__month {
+    padding-bottom: 8px;
+  }
+
+  .react-datepicker__day,
+  .react-datepicker__day-name {
+    width: 1.95rem;
+    line-height: 1.95rem;
+    margin: 0.14rem;
+  }
+
+  .terminos-intro {
+    font-size: 16px;
+    margin-bottom: 22px;
+  }
+
+  .terminos-grid {
+    gap: 14px;
+  }
+
+  .termino-card h3 {
+    font-size: 0.98rem;
+  }
+
+  .termino-card p {
+    font-size: 0.95rem;
+  }
+
+  .contacto-info p {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
+  .footer {
+    padding: 42px 18px 90px;
+  }
+
+  .admin {
+    padding: 14px;
+  }
+
+  .admin-header {
+    padding: 18px;
+  }
+
+  .admin-header-actions,
+  .admin-toolbar {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-stats-profesional {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .admin-reportes > div,
+  .admin-filtros-profesional {
+    padding: 14px;
+  }
+
+  .admin-reportes p {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-tabla-wrapper {
+    border-radius: 12px;
+  }
+
+  .acciones-admin {
+    grid-template-columns: repeat(2, minmax(88px, 1fr));
+  }
+
+  .modal-overlay {
+    align-items: flex-start;
+    padding: 10px;
+  }
+
+  .modal-editar {
+    max-width: 100%;
+    max-height: calc(100svh - 20px);
+    padding: 18px;
+    border-radius: 14px;
+  }
+
+  .modal-seccion {
+    padding: 12px;
+  }
+
+  .modal-botones {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .modal-botones button {
+    width: 100%;
+  }
+
+  .admin-login {
+    padding: 16px;
+  }
+
+  .admin-login-card {
+    padding: 22px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 14px;
+  }
+
+  .nav-links {
+    gap: 6px 10px;
+    font-size: 0.86rem;
+  }
+
+  .hero h1 {
+    font-size: 34px;
+  }
+
+  .hero p {
+    font-size: 17px;
+  }
+
+  .experiencia,
+  .cabaÃ±as,
+  .tarifas,
+  .reservas,
+  .terminos,
+  .contacto,
+  .actividades,
+  .ubicacion {
+    padding: 54px 14px;
+  }
+
+  .experiencia h2,
+  .cabaÃ±as h2,
+  .tarifas h2,
+  .actividades h2,
+  .ubicacion h2,
+  .reservas h2,
+  .terminos h2,
+  .contacto h2 {
+    font-size: 28px;
+  }
+
+  .reserva-form {
+    padding: 16px;
+  }
+
+  .calendario-ayuda,
+  .resumen-disponibilidad,
+  .terminos-check,
+  .tipo-reserva-auto {
+    font-size: 0.92rem;
+  }
+
+  .calendario-leyenda {
+    justify-content: center;
+  }
+
+  .precio-reserva {
+    padding: 16px;
+  }
+
+  .linea-resumen,
+  .linea-total,
+  .linea-anticipo,
+  .linea-saldo {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .linea-resumen span:last-child,
+  .linea-total span:last-child,
+  .linea-anticipo span:last-child,
+  .linea-saldo span:last-child,
+  .linea-resumen strong {
+    text-align: left;
+  }
+
+  .react-datepicker {
+    width: min(286px, calc(100vw - 36px));
+    border-radius: 14px;
+  }
+
+  .react-datepicker__month {
+    padding: 2px 8px 8px;
+  }
+
+  .react-datepicker__day-names {
+    padding: 5px 8px 2px;
+  }
+
+  .react-datepicker__day,
+  .react-datepicker__day-name {
+    width: 1.72rem;
+    line-height: 1.72rem;
+    margin: 0.12rem;
+    font-size: 12px;
+  }
+
+  .contacto-info {
+    font-size: 16px;
+  }
+
+  .whatsapp-float {
+    width: 52px;
+    height: 52px;
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .admin h2 {
+    font-size: 1.45rem;
+  }
+
+  .acciones-admin {
+    grid-template-columns: 1fr;
+    min-width: 150px;
+  }
+
+  .admin-login-brand h1 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Ajuste fino del ancho visual del calendario */
+.react-datepicker-popper {
+  width: fit-content !important;
+  max-width: calc(100vw - 24px) !important;
+}
+
+.react-datepicker {
+  width: fit-content !important;
+  min-width: 0 !important;
+  max-width: calc(100vw - 24px) !important;
+  box-sizing: border-box;
+}
+
+.react-datepicker__month-container {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.react-datepicker__header {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.react-datepicker__day-names,
+.react-datepicker__week {
+  width: fit-content;
+  justify-content: flex-start;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.react-datepicker__month {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .react-datepicker {
+    max-width: calc(100vw - 28px) !important;
+  }
+}
+
+/* Rediseño visual final del calendario react-datepicker */
+.react-datepicker-popper {
+  width: auto !important;
+  max-width: calc(100vw - 24px) !important;
+}
+
+.react-datepicker {
+  width: 308px !important;
+  max-width: calc(100vw - 24px) !important;
+  padding: 0 !important;
+  border: 1px solid #e0eadf !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 16px 38px rgba(29, 63, 33, 0.16) !important;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.react-datepicker__month-container {
+  float: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.react-datepicker__header {
+  position: relative;
+  min-height: auto;
+  padding: 12px 12px 8px !important;
+  background: #f7fbf6 !important;
+  border-bottom: 1px solid #e6efe4 !important;
+  box-sizing: border-box;
+}
+
+.react-datepicker__current-month {
+  display: none;
+  min-height: 32px;
+  margin: 0;
+  color: #1b5e20;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  max-width: 100%;
+  padding: 6px 0 0;
+}
+
+.calendario-header-custom {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 8px;
+}
+
+.calendario-header-titulo {
+  color: #1b5e20;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.react-datepicker .calendario-nav-boton {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #d9e8d6;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #2e7d32;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.react-datepicker .calendario-nav-boton:hover {
+  background: #eef8f0;
+  transform: none;
+}
+
+.react-datepicker .calendario-nav-boton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.react-datepicker__navigation {
+  position: absolute !important;
+  top: 14px !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid #d9e8d6 !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
+  cursor: pointer;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.react-datepicker__navigation:hover {
+  background: #eef8f0 !important;
+  transform: none !important;
+}
+
+.react-datepicker__navigation--previous {
+  left: 14px !important;
+}
+
+.react-datepicker__navigation--next {
+  right: 14px !important;
+}
+
+.react-datepicker__navigation-icon {
+  position: relative;
+  top: 0 !important;
+  width: 9px;
+  height: 9px;
+  font-size: 0;
+}
+
+.react-datepicker__navigation-icon::before {
+  width: 8px !important;
+  height: 8px !important;
+  border-color: #2e7d32 !important;
+  border-width: 2px 2px 0 0 !important;
+  top: 0 !important;
+}
+
+.react-datepicker__day-names {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin: 0;
+  padding: 8px 12px 0 !important;
+  box-sizing: border-box;
+}
+
+.react-datepicker__day-name {
+  width: auto !important;
+  height: 24px;
+  line-height: 24px !important;
+  margin: 0 !important;
+  color: #7a8b75;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.react-datepicker__month {
+  width: 100%;
+  margin: 0 !important;
+  padding: 6px 12px 12px !important;
+  box-sizing: border-box;
+}
+
+.react-datepicker__week {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin: 0;
+}
+
+.react-datepicker__day {
+  width: 34px !important;
+  height: 34px;
+  line-height: 34px !important;
+  margin: 0 auto 4px !important;
+  border-radius: 50%;
+  font-size: 0.88rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.react-datepicker__day--outside-month {
+  visibility: hidden;
+}
+
+@media (max-width: 480px) {
+  .react-datepicker {
+    width: 286px !important;
+  }
+
+  .react-datepicker__header {
+    padding-inline: 10px !important;
+  }
+
+  .calendario-header-custom {
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
+    gap: 8px;
+  }
+
+  .calendario-header-titulo {
+    font-size: 0.92rem;
+  }
+
+  .react-datepicker .calendario-nav-boton {
+    width: 30px;
+    height: 30px;
+    min-height: 30px;
+    font-size: 1.2rem;
+  }
+
+  .react-datepicker__day-names,
+  .react-datepicker__month {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .react-datepicker__day {
+    width: 30px !important;
+    height: 30px;
+    line-height: 30px !important;
+    font-size: 0.8rem;
+  }
+}
