@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase";
 import {
   CABANAS,
-  asignarPrimeraCabanaDisponible,
   calcularNoches,
+  calcularTarifaReserva,
   fechaToISO,
   formatoMoneda,
   normalizarCabana,
@@ -11,8 +11,12 @@ import {
   rangoDisponible,
 } from "../lib/reservas";
 
+const FILTRO_TODAS = "Todas";
+const FILTRO_TODOS = "Todos";
+const FILTRO_MES_ACTUAL = "Mes actual";
+
 function valorTotal(reserva) {
-  return Number(reserva.total ?? (Number(reserva.anticipo || 0) * 2));
+  return Number(reserva.total ?? Number(reserva.anticipo || 0) * 2);
 }
 
 function valorAnticipo(reserva) {
@@ -28,11 +32,20 @@ function valorSaldo(reserva) {
 }
 
 function adultosReserva(reserva) {
-  return Number(reserva.adultos ?? reserva.personas ?? 1);
+  return Math.max(1, Number(reserva.adultos ?? reserva.personas ?? 1));
 }
 
 function ninosReserva(reserva) {
-  return Number(reserva.ninos_menores ?? 0);
+  return Math.max(0, Number(reserva.ninos_menores ?? 0));
+}
+
+function personasReserva(reserva) {
+  return adultosReserva(reserva) + ninosReserva(reserva);
+}
+
+function fechaLegible(fecha) {
+  if (!fecha) return "-";
+  return new Date(`${fecha.slice(0, 10)}T00:00:00`).toLocaleDateString("es-CO");
 }
 
 function crearReservaVacia() {
@@ -54,20 +67,63 @@ function crearReservaVacia() {
     total: 0,
     anticipo: 0,
     saldo_pendiente: 0,
-    cabana: "Cabaña 1",
+    cabana: CABANAS[0],
     estado: "Pendiente",
     observaciones: "",
     pago_confirmado: false,
   };
 }
 
+function normalizarReservaParaEditar(reserva) {
+  return {
+    ...reserva,
+    cabana: normalizarCabana(reserva.cabana) || CABANAS[0],
+    adultos: adultosReserva(reserva),
+    ninos_menores: ninosReserva(reserva),
+    personas: personasReserva(reserva),
+    total: valorTotal(reserva),
+    anticipo: valorAnticipo(reserva),
+    saldo_pendiente: valorSaldo(reserva),
+  };
+}
+
+function aplicarCalculoAutomatico(reserva) {
+  if (!reserva.fecha_ingreso || !reserva.fecha_salida) {
+    return {
+      ...reserva,
+      personas: Number(reserva.adultos || 1) + Number(reserva.ninos_menores || 0),
+    };
+  }
+
+  const tarifa = calcularTarifaReserva({
+    adultos: reserva.adultos,
+    ninosMenores: reserva.ninos_menores,
+    fechaIngreso: reserva.fecha_ingreso,
+    fechaSalida: reserva.fecha_salida,
+  });
+
+  return {
+    ...reserva,
+    adultos: tarifa.adultos,
+    ninos_menores: tarifa.ninosMenores,
+    personas: tarifa.personas,
+    total: tarifa.total,
+    anticipo: tarifa.anticipo,
+    saldo_pendiente: tarifa.saldoPendiente,
+  };
+}
+
 function Admin() {
   const [busqueda, setBusqueda] = useState("");
-  const [filtroEstado, setFiltroEstado] = useState("Todas");
+  const [filtroEstado, setFiltroEstado] = useState(FILTRO_TODAS);
+  const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
+  const [filtroPago, setFiltroPago] = useState(FILTRO_TODOS);
+  const [filtroFecha, setFiltroFecha] = useState(FILTRO_TODOS);
   const [reservas, setReservas] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [reservaEditando, setReservaEditando] = useState(null);
   const [modoCrear, setModoCrear] = useState(false);
+  const [valoresManuales, setValoresManuales] = useState(false);
 
   const cargarReservas = async () => {
     const { data, error } = await supabase
@@ -102,30 +158,30 @@ function Admin() {
 
   const validarReserva = (reserva, cambios = {}) => {
     const reservaFinal = { ...reserva, ...cambios };
+    const errores = [];
+    const adultos = Math.max(1, Number(reservaFinal.adultos || reservaFinal.personas || 1));
+    const ninos = Math.max(0, Number(reservaFinal.ninos_menores || 0));
+    const cabana = normalizarCabana(reservaFinal.cabana);
     const estadoBloquea = ["pendiente", "confirmada"].includes(normalizarEstado(reservaFinal.estado));
 
-    if (!reservaFinal.fecha_ingreso || !reservaFinal.fecha_salida) {
-      alert("Completa fecha de ingreso y salida.");
-      return null;
+    if (!reservaFinal.nombre?.trim()) errores.push("El nombre es obligatorio.");
+    if (!reservaFinal.celular?.trim()) errores.push("El celular es obligatorio.");
+    if (!cabana) errores.push("La cabaña es obligatoria.");
+    if (!reservaFinal.fecha_ingreso) errores.push("La fecha de ingreso es obligatoria.");
+    if (!reservaFinal.fecha_salida) errores.push("La fecha de salida es obligatoria.");
+    if (adultos < 1) errores.push("Debe haber al menos 1 adulto.");
+    if (ninos < 0) errores.push("Los niños no pueden ser negativos.");
+
+    if (
+      reservaFinal.fecha_ingreso &&
+      reservaFinal.fecha_salida &&
+      calcularNoches(reservaFinal.fecha_ingreso, reservaFinal.fecha_salida) <= 0
+    ) {
+      errores.push("La fecha de salida debe ser posterior a la fecha de ingreso.");
     }
 
-    if (calcularNoches(reservaFinal.fecha_ingreso, reservaFinal.fecha_salida) <= 0) {
-      alert("La fecha de salida debe ser posterior a la fecha de ingreso.");
-      return null;
-    }
-
-    const cabanaAsignada = estadoBloquea
-      ? asignarPrimeraCabanaDisponible({
-          reservas,
-          fechaIngreso: reservaFinal.fecha_ingreso,
-          fechaSalida: reservaFinal.fecha_salida,
-          cabanaPreferida: reservaFinal.cabana,
-          ignorarId: reservaFinal.id,
-        })
-      : normalizarCabana(reservaFinal.cabana) || "Cabaña 1";
-
-    if (estadoBloquea && !cabanaAsignada) {
-      alert("No hay disponibilidad para esa cabaña y fechas.");
+    if (errores.length > 0) {
+      alert(errores.join("\n"));
       return null;
     }
 
@@ -135,7 +191,7 @@ function Admin() {
         reservas,
         fechaIngreso: reservaFinal.fecha_ingreso,
         fechaSalida: reservaFinal.fecha_salida,
-        cabana: cabanaAsignada,
+        cabana,
         ignorarId: reservaFinal.id,
       })
     ) {
@@ -143,15 +199,13 @@ function Admin() {
       return null;
     }
 
-    const adultos = Math.max(1, Number(reservaFinal.adultos || reservaFinal.personas || 1));
-    const ninos = Math.max(0, Number(reservaFinal.ninos_menores || 0));
     const total = Number(reservaFinal.total || 0);
     const anticipo = Number(reservaFinal.anticipo || 0);
     const saldo = Number(reservaFinal.saldo_pendiente ?? Math.max(total - anticipo, 0));
 
     return {
       ...reservaFinal,
-      cabana: cabanaAsignada,
+      cabana,
       adultos,
       ninos_menores: ninos,
       personas: adultos + ninos,
@@ -168,7 +222,7 @@ function Admin() {
 
     const { error } = await supabase
       .from("reservas")
-      .update({ estado: "Confirmada", cabana: reservaValidada.cabana })
+      .update({ estado: "Confirmada" })
       .eq("id", reserva.id);
 
     if (error) {
@@ -191,7 +245,6 @@ function Admin() {
       .update({
         pago_confirmado: true,
         estado: "Confirmada",
-        cabana: reservaValidada.cabana,
       })
       .eq("id", reserva.id);
 
@@ -214,26 +267,17 @@ function Admin() {
     cargarReservas();
   };
 
-  const normalizarReservaParaEditar = (reserva) => ({
-    ...reserva,
-    cabana: normalizarCabana(reserva.cabana),
-    adultos: adultosReserva(reserva),
-    ninos_menores: ninosReserva(reserva),
-    personas: adultosReserva(reserva) + ninosReserva(reserva),
-    total: valorTotal(reserva),
-    anticipo: valorAnticipo(reserva),
-    saldo_pendiente: valorSaldo(reserva),
-  });
-
   const editarReserva = (reserva) => {
     setModoCrear(false);
+    setValoresManuales(true);
     setReservaEditando(normalizarReservaParaEditar(reserva));
     setMostrarModal(true);
   };
 
   const nuevaReserva = () => {
     setModoCrear(true);
-    setReservaEditando(crearReservaVacia());
+    setValoresManuales(false);
+    setReservaEditando(aplicarCalculoAutomatico(crearReservaVacia()));
     setMostrarModal(true);
   };
 
@@ -275,6 +319,7 @@ function Admin() {
 
     setMostrarModal(false);
     setModoCrear(false);
+    setValoresManuales(false);
     cargarReservas();
   };
 
@@ -291,8 +336,22 @@ function Admin() {
     cargarReservas();
   };
 
+  const actualizarCampoReserva = (campo, valor) => {
+    setReservaEditando((actual) => {
+      const actualizada = { ...actual, [campo]: valor };
+      if (valoresManuales) return actualizada;
+      return aplicarCalculoAutomatico(actualizada);
+    });
+  };
+
+  const actualizarHuespedes = (campo, valor) => {
+    const numero = campo === "adultos" ? Math.max(1, Number(valor || 1)) : Math.max(0, Number(valor || 0));
+    actualizarCampoReserva(campo, numero);
+  };
+
   const actualizarImporte = (campo, valor) => {
     const numero = Number(valor || 0);
+    setValoresManuales(true);
     setReservaEditando((actual) => {
       const nuevo = { ...actual, [campo]: numero };
       if (campo === "total" || campo === "anticipo") {
@@ -302,24 +361,36 @@ function Admin() {
     });
   };
 
-  const actualizarHuespedes = (campo, valor) => {
-    const numero = campo === "adultos" ? Math.max(1, Number(valor || 1)) : Math.max(0, Number(valor || 0));
-    setReservaEditando((actual) => {
-      const nuevo = { ...actual, [campo]: numero };
-      nuevo.personas = Number(nuevo.adultos || 1) + Number(nuevo.ninos_menores || 0);
-      return nuevo;
+  const reservasFiltradas = useMemo(() => {
+    const hoy = new Date();
+    const mesActual = hoy.getMonth();
+    const anioActual = hoy.getFullYear();
+
+    return reservas.filter((r) => {
+      const busquedaNormalizada = busqueda.trim().toLowerCase();
+      const coincideBusqueda =
+        !busquedaNormalizada ||
+        r.nombre?.toLowerCase().includes(busquedaNormalizada) ||
+        r.celular?.toString().includes(busquedaNormalizada);
+
+      const coincideEstado = filtroEstado === FILTRO_TODAS || r.estado === filtroEstado;
+      const coincideCabana = filtroCabana === FILTRO_TODAS || normalizarCabana(r.cabana) === filtroCabana;
+      const coincidePago =
+        filtroPago === FILTRO_TODOS ||
+        (filtroPago === "Pago confirmado" && r.pago_confirmado) ||
+        (filtroPago === "Pago pendiente" && !r.pago_confirmado);
+
+      const fechaIngreso = r.fecha_ingreso ? new Date(`${r.fecha_ingreso.slice(0, 10)}T00:00:00`) : null;
+      const coincideFecha =
+        filtroFecha === FILTRO_TODOS ||
+        (fechaIngreso &&
+          filtroFecha === FILTRO_MES_ACTUAL &&
+          fechaIngreso.getMonth() === mesActual &&
+          fechaIngreso.getFullYear() === anioActual);
+
+      return coincideBusqueda && coincideEstado && coincideCabana && coincidePago && coincideFecha;
     });
-  };
-
-  const reservasFiltradas = reservas.filter((r) => {
-    const coincideBusqueda =
-      r.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
-      r.celular?.toString().includes(busqueda);
-
-    const coincideEstado = filtroEstado === "Todas" || r.estado === filtroEstado;
-
-    return coincideBusqueda && coincideEstado;
-  });
+  }, [reservas, busqueda, filtroEstado, filtroCabana, filtroPago, filtroFecha]);
 
   const reportes = useMemo(() => {
     const hoy = new Date();
@@ -335,6 +406,8 @@ function Admin() {
       return acc;
     }, 0);
 
+    const saldosPendientes = reservasValidas.reduce((acc, r) => acc + valorSaldo(r), 0);
+
     const porMes = reservas.reduce((acc, r) => {
       const llave = (r.created_at || r.fecha_ingreso || "").slice(0, 7) || "Sin fecha";
       acc[llave] = (acc[llave] || 0) + 1;
@@ -346,18 +419,63 @@ function Admin() {
       return acc;
     }, {});
 
-    return { ingresosMes, porMes, porCabana };
+    return { ingresosMes, saldosPendientes, porMes, porCabana };
   }, [reservas]);
+
+  const exportarCsv = () => {
+    const columnas = [
+      "nombre",
+      "celular",
+      "correo",
+      "cabana",
+      "fecha_ingreso",
+      "fecha_salida",
+      "adultos",
+      "ninos",
+      "personas",
+      "total",
+      "anticipo",
+      "saldo_pendiente",
+      "estado",
+      "pago_confirmado",
+      "observaciones",
+    ];
+
+    const filas = reservasFiltradas.map((r) => [
+      r.nombre || "",
+      r.celular || "",
+      r.correo || "",
+      normalizarCabana(r.cabana),
+      r.fecha_ingreso || "",
+      r.fecha_salida || "",
+      adultosReserva(r),
+      ninosReserva(r),
+      personasReserva(r),
+      valorTotal(r),
+      valorAnticipo(r),
+      valorSaldo(r),
+      r.estado || "",
+      r.pago_confirmado ? "Si" : "No",
+      r.observaciones || "",
+    ]);
+
+    const escapar = (valor) => `"${String(valor).replaceAll('"', '""')}"`;
+    const csv = [columnas, ...filas].map((fila) => fila.map(escapar).join(",")).join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reservas-refugio-la-arboleda-${fechaToISO(new Date())}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const pendientes = reservas.filter((r) => normalizarEstado(r.estado) === "pendiente").length;
   const confirmadas = reservas.filter((r) => normalizarEstado(r.estado) === "confirmada").length;
   const canceladas = reservas.filter((r) => normalizarEstado(r.estado) === "cancelada").length;
-  const dineroTotal = reservas
-    .filter((r) => normalizarEstado(r.estado) !== "cancelada")
-    .reduce((acc, r) => acc + valorTotal(r), 0);
-  const anticiposTotales = reservas
-    .filter((r) => normalizarEstado(r.estado) !== "cancelada")
-    .reduce((acc, r) => acc + valorAnticipo(r), 0);
+  const reservasNoCanceladas = reservas.filter((r) => normalizarEstado(r.estado) !== "cancelada");
+  const dineroTotal = reservasNoCanceladas.reduce((acc, r) => acc + valorTotal(r), 0);
+  const anticiposTotales = reservasNoCanceladas.reduce((acc, r) => acc + valorAnticipo(r), 0);
 
   return (
     <section className="admin">
@@ -366,15 +484,17 @@ function Admin() {
           <h2>Panel de Reservas</h2>
           <p>Gestion de disponibilidad, pagos y reportes.</p>
         </div>
+        <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>
       </div>
 
-      <div className="admin-stats">
-        <div className="stat-card"><h3>{reservas.length}</h3><p>Total</p></div>
+      <div className="admin-stats admin-stats-profesional">
+        <div className="stat-card"><h3>{reservas.length}</h3><p>Total de reservas</p></div>
         <div className="stat-card pendiente"><h3>{pendientes}</h3><p>Pendientes</p></div>
         <div className="stat-card confirmada"><h3>{confirmadas}</h3><p>Confirmadas</p></div>
         <div className="stat-card cancelada"><h3>{canceladas}</h3><p>Canceladas</p></div>
-        <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas</p></div>
+        <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
         <div className="stat-card anticipos"><h3>${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
+        <div className="stat-card saldos"><h3>${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
         <div className="stat-card ingresos"><h3>${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
       </div>
 
@@ -393,15 +513,31 @@ function Admin() {
         </div>
       </div>
 
-      <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
+      <div className="admin-toolbar">
+        <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
+        <span>{reservasFiltradas.length} reservas visibles</span>
+      </div>
 
-      <div className="admin-filtros">
-        <input type="text" placeholder="Buscar cliente o celular..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+      <div className="admin-filtros admin-filtros-profesional">
+        <input type="text" placeholder="Buscar por nombre o celular..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-          <option>Todas</option>
+          <option>{FILTRO_TODAS}</option>
           <option>Pendiente</option>
           <option>Confirmada</option>
           <option>Cancelada</option>
+        </select>
+        <select value={filtroCabana} onChange={(e) => setFiltroCabana(e.target.value)}>
+          <option>{FILTRO_TODAS}</option>
+          {CABANAS.map((cabana) => <option key={cabana}>{cabana}</option>)}
+        </select>
+        <select value={filtroPago} onChange={(e) => setFiltroPago(e.target.value)}>
+          <option>{FILTRO_TODOS}</option>
+          <option>Pago pendiente</option>
+          <option>Pago confirmado</option>
+        </select>
+        <select value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)}>
+          <option>{FILTRO_TODOS}</option>
+          <option>{FILTRO_MES_ACTUAL}</option>
         </select>
       </div>
 
@@ -410,10 +546,11 @@ function Admin() {
           <thead>
             <tr>
               <th>Cliente</th>
-              <th>Cabaña</th>
               <th>Celular</th>
+              <th>Cabaña</th>
               <th>Ingreso</th>
               <th>Salida</th>
+              <th>Noches</th>
               <th>Adultos</th>
               <th>Niños</th>
               <th>Personas</th>
@@ -429,13 +566,14 @@ function Admin() {
             {reservasFiltradas.map((r) => (
               <tr key={r.id}>
                 <td>{r.nombre}</td>
-                <td>{normalizarCabana(r.cabana)}</td>
                 <td>{r.celular}</td>
-                <td>{new Date(`${r.fecha_ingreso}T00:00:00`).toLocaleDateString("es-CO")}</td>
-                <td>{new Date(`${r.fecha_salida}T00:00:00`).toLocaleDateString("es-CO")}</td>
+                <td>{normalizarCabana(r.cabana)}</td>
+                <td>{fechaLegible(r.fecha_ingreso)}</td>
+                <td>{fechaLegible(r.fecha_salida)}</td>
+                <td>{calcularNoches(r.fecha_ingreso, r.fecha_salida)}</td>
                 <td>{adultosReserva(r)}</td>
                 <td>{ninosReserva(r)}</td>
-                <td>{adultosReserva(r) + ninosReserva(r)}</td>
+                <td>{personasReserva(r)}</td>
                 <td>${formatoMoneda(valorTotal(r))}</td>
                 <td>${formatoMoneda(valorAnticipo(r))}</td>
                 <td>${formatoMoneda(valorSaldo(r))}</td>
@@ -446,7 +584,7 @@ function Admin() {
                   </span>
                 </td>
                 <td>
-                  <div className="acciones">
+                  <div className="acciones acciones-admin">
                     <button className="btn-confirmar" onClick={() => confirmarReserva(r)}>Confirmar</button>
                     <button className="btn-pago" onClick={() => confirmarPago(r)}>Pago recibido</button>
                     <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)}>Cancelar</button>
@@ -462,29 +600,51 @@ function Admin() {
 
       {mostrarModal && reservaEditando && (
         <div className="modal-overlay">
-          <div className="modal-editar">
+          <div className="modal-editar modal-admin-profesional">
             <h2>{modoCrear ? "Nueva Reserva" : "Editar Reserva"}</h2>
 
-            <div className="modal-grid">
-              <input type="text" placeholder="Nombre" value={reservaEditando.nombre || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, nombre: e.target.value })} />
-              <input type="text" placeholder="Celular" value={reservaEditando.celular || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, celular: e.target.value })} />
-              <input type="text" placeholder="Identificacion" value={reservaEditando.identificacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, identificacion: e.target.value })} />
-              <input type="email" placeholder="Correo" value={reservaEditando.correo || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, correo: e.target.value })} />
-              <label>Ingreso<input type="date" value={reservaEditando.fecha_ingreso || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, fecha_ingreso: e.target.value })} /></label>
-              <label>Salida<input type="date" value={reservaEditando.fecha_salida || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, fecha_salida: e.target.value })} /></label>
-              <label>Adultos<input type="number" min="1" value={reservaEditando.adultos || 1} onChange={(e) => actualizarHuespedes("adultos", e.target.value)} /></label>
-              <label>Niños menores<input type="number" min="0" value={reservaEditando.ninos_menores || 0} onChange={(e) => actualizarHuespedes("ninos_menores", e.target.value)} /></label>
-              <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} /></label>
-              <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} /></label>
-              <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} /></label>
-              <select value={normalizarCabana(reservaEditando.cabana) || "Cabaña 1"} onChange={(e) => setReservaEditando({ ...reservaEditando, cabana: e.target.value })}>
-                {CABANAS.map((item) => <option key={item}>{item}</option>)}
-              </select>
-              <select value={reservaEditando.estado || "Pendiente"} onChange={(e) => setReservaEditando({ ...reservaEditando, estado: e.target.value })}>
-                <option>Pendiente</option>
-                <option>Confirmada</option>
-                <option>Cancelada</option>
-              </select>
+            <div className="modal-seccion">
+              <h3>Cliente</h3>
+              <div className="modal-grid">
+                <input type="text" placeholder="Nombre" value={reservaEditando.nombre || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, nombre: e.target.value })} />
+                <input type="text" placeholder="Celular" value={reservaEditando.celular || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, celular: e.target.value })} />
+                <input type="text" placeholder="Identificacion" value={reservaEditando.identificacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, identificacion: e.target.value })} />
+                <input type="email" placeholder="Correo" value={reservaEditando.correo || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, correo: e.target.value })} />
+                <input type="text" placeholder="Ocupacion" value={reservaEditando.ocupacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, ocupacion: e.target.value })} />
+                <input type="text" placeholder="Residencia" value={reservaEditando.residencia || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, residencia: e.target.value })} />
+              </div>
+            </div>
+
+            <div className="modal-seccion">
+              <h3>Reserva</h3>
+              <div className="modal-grid">
+                <select value={normalizarCabana(reservaEditando.cabana) || CABANAS[0]} onChange={(e) => actualizarCampoReserva("cabana", e.target.value)}>
+                  {CABANAS.map((item) => <option key={item}>{item}</option>)}
+                </select>
+                <select value={reservaEditando.estado || "Pendiente"} onChange={(e) => setReservaEditando({ ...reservaEditando, estado: e.target.value })}>
+                  <option>Pendiente</option>
+                  <option>Confirmada</option>
+                  <option>Cancelada</option>
+                </select>
+                <label>Ingreso<input type="date" value={reservaEditando.fecha_ingreso || ""} onChange={(e) => actualizarCampoReserva("fecha_ingreso", e.target.value)} /></label>
+                <label>Salida<input type="date" value={reservaEditando.fecha_salida || ""} onChange={(e) => actualizarCampoReserva("fecha_salida", e.target.value)} /></label>
+                <label>Adultos<input type="number" min="1" value={reservaEditando.adultos || 1} onChange={(e) => actualizarHuespedes("adultos", e.target.value)} /></label>
+                <label>Niños menores<input type="number" min="0" value={reservaEditando.ninos_menores || 0} onChange={(e) => actualizarHuespedes("ninos_menores", e.target.value)} /></label>
+              </div>
+            </div>
+
+            <div className="modal-seccion">
+              <h3>Valores</h3>
+              <div className="modal-grid">
+                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} /></label>
+                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} /></label>
+                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} /></label>
+              </div>
+              <p className="nota-valores">
+                {valoresManuales
+                  ? "Valores manuales activos."
+                  : "Los valores se recalculan automaticamente con fechas y huespedes."}
+              </p>
             </div>
 
             <textarea placeholder="Observaciones" value={reservaEditando.observaciones || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, observaciones: e.target.value })} />
