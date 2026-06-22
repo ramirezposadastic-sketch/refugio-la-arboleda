@@ -284,6 +284,18 @@ body {
   font-weight: bold;
 }
 
+.huespedes-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.huespedes-grid label {
+  text-align: left;
+  color: #2d5a27;
+  font-weight: 700;
+}
+
 .mensaje-error {
   margin-top: 15px;
   background: #fff0f0;
@@ -292,6 +304,16 @@ body {
   padding: 15px;
   border-radius: 12px;
   font-weight: bold;
+}
+
+.disponibilidad-ok {
+  margin-top: 15px;
+  background: #eef8f0;
+  border: 1px solid #b8ddbf;
+  color: #246c2a;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
 }
 
 button:disabled {
@@ -343,7 +365,8 @@ button:hover {
 
 .linea-resumen,
 .linea-total,
-.linea-anticipo {
+.linea-anticipo,
+.linea-saldo {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -359,6 +382,12 @@ button:hover {
 .linea-anticipo {
   font-size: 18px;
   font-weight: 600;
+}
+
+.linea-saldo {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4a5d46;
 }
 
 .contacto {
@@ -567,12 +596,12 @@ button:hover {
 
 /* CONTENEDOR PRINCIPAL DEL CALENDARIO */
 .react-datepicker {
-  width: 290px;
+  width: 330px;
   border: none;
-  border-radius: 18px;
+  border-radius: 16px;
   overflow: hidden;
   background: #fff;
-  box-shadow: 0 10px 25px rgba(0,0,0,.12);
+  box-shadow: 0 18px 45px rgba(0,0,0,.16);
   font-family: 'Segoe UI', sans-serif;
 }
 
@@ -765,6 +794,10 @@ button:hover {
     grid-template-columns: 1fr;
   }
 
+  .huespedes-grid {
+    grid-template-columns: 1fr;
+  }
+
   .reserva-form {
     padding: 20px;
   }
@@ -795,6 +828,35 @@ button:hover {
   font-family: 'Segoe UI', system-ui, sans-serif;
   background: #f4f6f4;
   min-height: 100vh;
+}
+
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 26px;
+}
+
+.admin-header h2 {
+  margin-bottom: 6px;
+}
+
+.admin-header p {
+  color: #6f756d;
+}
+
+.btn-salir,
+.btn-nueva-reserva {
+  width: auto;
+  margin-top: 0;
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 14px;
+}
+
+.btn-salir {
+  background: #424242;
 }
 
 .admin h2 {
@@ -849,6 +911,36 @@ button:hover {
 .stat-card.cancelada h3  { color: #c62828; }
 .stat-card.ventas h3     { color: #1565c0; font-size: 1.4rem; }
 .stat-card.anticipos h3  { color: #6a1b9a; font-size: 1.4rem; }
+.stat-card.ingresos h3   { color: #00796b; font-size: 1.4rem; }
+
+.admin-reportes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0 0 24px;
+}
+
+.admin-reportes > div {
+  background: white;
+  border: 1px solid #eef0ee;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+}
+
+.admin-reportes h3 {
+  color: #1b5e20;
+  margin-bottom: 14px;
+  font-size: 1rem;
+}
+
+.admin-reportes p {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #f1f1f1;
+}
 
 /* --- Filtros --- */
 .admin-filtros {
@@ -889,7 +981,7 @@ button:hover {
 /* --- Tabla --- */
 .admin table {
   width: 100%;
-  min-width: 900px;        /* fuerza scroll antes de cortar */
+  min-width: 1200px;        /* fuerza scroll antes de cortar */
   border-collapse: collapse;
   background: white;
   table-layout: auto;      /* el navegador calcula anchos según contenido */
@@ -1018,6 +1110,37 @@ button:hover {
 .btn-eliminar  { background: #424242; }
 .btn-pago      { background: #1565c0; }
 
+.btn-nueva-reserva {
+  background: #2e7d32;
+  margin-bottom: 18px;
+}
+
+.admin-login {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f4f6f4;
+  padding: 24px;
+}
+
+.admin-login-card {
+  width: min(420px, 100%);
+  background: white;
+  border: 1px solid #eef0ee;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 15px 40px rgba(0,0,0,.08);
+  display: grid;
+  gap: 14px;
+}
+
+.admin-login-card input {
+  padding: 13px 14px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 15px;
+}
+
 /* --- Modal edición --- */
 .modal-overlay {
   position: fixed;
@@ -1034,12 +1157,38 @@ button:hover {
   background: white;
   padding: 30px;
   border-radius: 18px;
-  width: 500px;
+  width: 720px;
   max-width: 92%;
+  max-height: 90vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
   box-shadow: 0 20px 60px rgba(0,0,0,.18);
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.modal-grid label,
+.check-pago {
+  display: grid;
+  gap: 6px;
+  color: #556052;
+  font-weight: 600;
+  font-size: 0.86rem;
+}
+
+.check-pago {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.check-pago input {
+  width: auto;
 }
 
 .modal-editar h3 {
@@ -1117,4 +1266,22 @@ button:hover {
 @media (max-width: 768px) {
   .admin { padding: 16px; }
   .acciones { flex-wrap: wrap; }
+  .admin-header,
+  .admin-reportes,
+  .modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-header {
+    display: grid;
+  }
+
+  .btn-salir,
+  .btn-nueva-reserva {
+    width: 100%;
+  }
+
+  .react-datepicker {
+    width: 300px;
+  }
 }
