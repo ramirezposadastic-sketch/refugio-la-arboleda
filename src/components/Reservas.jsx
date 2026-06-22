@@ -101,14 +101,42 @@ function Reservas() {
     return "dia-disponible";
   };
 
-  const enviarWhatsApp = async () => {
+  const validarDatosContacto = () => {
     if (!nombre || !identificacion || !ocupacion || !residencia || !correo || !celular || !ingreso || !salida) {
       alert("Por favor completa todos los campos.");
-      return;
+      return false;
     }
 
-    if (tarifa.noches > 3) {
-      alert("Para reservas superiores a 3 noches comunicate directamente con nuestro WhatsApp.");
+    return true;
+  };
+
+  const consultarWhatsApp = () => {
+    if (!validarDatosContacto()) return;
+
+    const fmt = (d) => d?.toLocaleDateString("es-CO");
+    const mensaje = `
+REFUGIO LA ARBOLEDA - COTIZACION ESPECIAL
+
+Nombre: ${nombre}
+Celular: ${celular}
+Cabana: ${cabana || "Asignacion automatica"}
+Fecha ingreso: ${fmt(ingreso)}
+Fecha salida: ${fmt(salida)}
+Noches: ${tarifa.noches}
+Adultos: ${tarifa.adultos}
+Ninos menores de 8 anos: ${tarifa.ninosMenores}
+
+Solicito una cotizacion especial para una reserva de mas de 3 noches.
+    `.trim();
+
+    window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
+  };
+
+  const enviarWhatsApp = async () => {
+    if (!validarDatosContacto()) return;
+
+    if (tarifa.reservaLarga) {
+      consultarWhatsApp();
       return;
     }
 
@@ -161,12 +189,14 @@ REFUGIO LA ARBOLEDA - SOLICITUD DE RESERVA
 
 Nombre: ${nombre}
 Celular: ${celular}
-Cabaña: ${cabanaAsignada}
+Cabana: ${cabanaAsignada}
 Fecha ingreso: ${fmt(ingreso)}
 Fecha salida: ${fmt(salida)}
 Noches: ${tarifa.noches}
 Adultos: ${tarifa.adultos}
-Niños menores de 8 años: ${tarifa.ninosMenores}
+Ninos menores de 8 anos: ${tarifa.ninosMenores}
+Subtotal: $${formatoMoneda(tarifa.subtotalSinDescuento)}
+Descuento ${tarifa.descuentoPorcentaje}%: -$${formatoMoneda(tarifa.descuentoValor)}
 Total: $${formatoMoneda(tarifa.total)}
 Anticipo 40%: $${formatoMoneda(tarifa.anticipo)}
 Saldo pendiente al llegar: $${formatoMoneda(tarifa.saldoPendiente)}
@@ -270,7 +300,6 @@ Saldo pendiente al llegar: $${formatoMoneda(tarifa.saldoPendiente)}
           <div className="linea-resumen"><span>Cabaña seleccionada</span><span>{cabana || "Asignacion automatica"}</span></div>
           <div className="linea-resumen"><span>Fecha ingreso</span><span>{ingreso ? ingreso.toLocaleDateString("es-CO") : "-"}</span></div>
           <div className="linea-resumen"><span>Fecha salida</span><span>{salida ? salida.toLocaleDateString("es-CO") : "-"}</span></div>
-          <div className="linea-resumen"><span>Noches</span><span>{tarifa.noches}</span></div>
           <div className="linea-resumen"><span>Adultos</span><span>{tarifa.adultos}</span></div>
           <div className="linea-resumen"><span>Niños menores</span><span>{tarifa.ninosMenores}</span></div>
           <hr />
@@ -280,24 +309,39 @@ Saldo pendiente al llegar: $${formatoMoneda(tarifa.saldoPendiente)}
               <span>${formatoMoneda(item.valor)}</span>
             </div>
           ))}
-          {tarifa.noches > 1 && (
-            <div className="linea-resumen"><span>Valor por noche</span><span>${formatoMoneda(tarifa.valorNoche)}</span></div>
+          <hr />
+          <div className="linea-resumen"><span>Valor por noche</span><span>${formatoMoneda(tarifa.valorNoche)}</span></div>
+          <div className="linea-resumen"><span>Noches</span><span>{tarifa.noches}</span></div>
+          <div className="linea-resumen"><span>Subtotal</span><span>${formatoMoneda(tarifa.subtotalSinDescuento)}</span></div>
+          {tarifa.descuentoPorcentaje > 0 ? (
+            <div className="linea-resumen">
+              <span>Descuento aplicado {tarifa.descuentoPorcentaje}%</span>
+              <span>-${formatoMoneda(tarifa.descuentoValor)}</span>
+            </div>
+          ) : (
+            <div className="linea-resumen"><span>Descuento aplicado</span><span>$0</span></div>
           )}
           <hr />
-          <div className="linea-total"><span>Total</span><span>${formatoMoneda(tarifa.total)}</span></div>
+          <div className="linea-total"><span>Total con descuento</span><span>${formatoMoneda(tarifa.total)}</span></div>
           <div className="linea-anticipo"><span>Anticipo 40%</span><span>${formatoMoneda(tarifa.anticipo)}</span></div>
           <div className="linea-saldo"><span>Saldo pendiente</span><span>${formatoMoneda(tarifa.saldoPendiente)}</span></div>
         </div>
 
-        {tarifa.noches > 3 && (
+        {tarifa.reservaLarga && (
           <div className="mensaje-error">
-            Para reservas superiores a 3 noches comunicate directamente con nuestro WhatsApp.
+            Para reservas de mas de 3 noches, comunicate directamente con el hotel por WhatsApp para recibir una tarifa especial.
           </div>
         )}
 
-        <button type="button" onClick={enviarWhatsApp} disabled={!reservaOk || cargando}>
-          {cargando ? "Guardando..." : "Reservar por WhatsApp"}
-        </button>
+        {tarifa.reservaLarga ? (
+          <button type="button" onClick={consultarWhatsApp} disabled={!ingreso || !salida}>
+            Consultar por WhatsApp
+          </button>
+        ) : (
+          <button type="button" onClick={enviarWhatsApp} disabled={!reservaOk || cargando}>
+            {cargando ? "Guardando..." : "Reservar por WhatsApp"}
+          </button>
+        )}
 
         <p>Para confirmar la reserva se solicita un anticipo del 40%.</p>
       </form>
