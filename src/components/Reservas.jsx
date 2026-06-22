@@ -1,36 +1,21 @@
-import { supabase } from "../supabase";
-import { useState, useEffect } from "react";
-import DatePicker from "react-datepicker";
+import { useEffect, useMemo, useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { registerLocale } from "react-datepicker";
 import { es } from "date-fns/locale";
+import { supabase } from "../supabase";
+import {
+  CABANAS,
+  asignarPrimeraCabanaDisponible,
+  calcularTarifaReserva,
+  fechaEstaLlena,
+  fechaOcupadaPorCabana,
+  fechaToISO,
+  formatoMoneda,
+  obtenerCabanasDisponibles,
+  rangoDisponible,
+} from "../lib/reservas";
 
 registerLocale("es", es);
-
-const ESTADOS_QUE_BLOQUEAN = ["Pendiente", "Confirmada"];
-
-const formatFechaLocal = (date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
-
-const parseFechaLocal = (fecha) => {
-  if (!fecha) return null;
-  const [year, month, day] = fecha.split("-").map(Number);
-  return new Date(year, month - 1, day);
-};
-
-const sumarDias = (date, dias) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate() + dias);
-
-const fechaLocalTime = (date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
-
-const seCruzanRangos = (inicioA, salidaA, inicioB, salidaB) =>
-  fechaLocalTime(inicioA) < fechaLocalTime(salidaB) &&
-  fechaLocalTime(inicioB) < fechaLocalTime(salidaA);
 
 function Reservas() {
   const [nombre, setNombre] = useState("");
@@ -41,160 +26,159 @@ function Reservas() {
   const [residencia, setResidencia] = useState("");
   const [ingreso, setIngreso] = useState(null);
   const [salida, setSalida] = useState(null);
-  const [personas, setPersonas] = useState("1");
+  const [adultos, setAdultos] = useState("2");
+  const [ninosMenores, setNinosMenores] = useState("0");
   const [cabana, setCabana] = useState("");
-  const [reservasBloqueantes, setReservasBloqueantes] = useState([]);
+  const [reservas, setReservas] = useState([]);
   const [cargando, setCargando] = useState(false);
 
-  const fechaEstaOcupada = (date) =>
-    reservasBloqueantes.some((r) => {
-      const inicio = parseFechaLocal(r.fecha_ingreso);
-      const fin = parseFechaLocal(r.fecha_salida);
-      return (
-        inicio &&
-        fin &&
-        fechaLocalTime(date) >= fechaLocalTime(inicio) &&
-        fechaLocalTime(date) < fechaLocalTime(fin)
-      );
-    });
-
-  const rangoEstaOcupado = (inicio, fin) =>
-    reservasBloqueantes.some((r) => {
-      const reservaInicio = parseFechaLocal(r.fecha_ingreso);
-      const reservaFin = parseFechaLocal(r.fecha_salida);
-      return (
-        reservaInicio &&
-        reservaFin &&
-        seCruzanRangos(inicio, fin, reservaInicio, reservaFin)
-      );
-    });
-
   useEffect(() => {
-    if (!cabana) {
-      return;
-    }
-
     const cargarReservas = async () => {
       const { data, error } = await supabase
         .from("reservas")
-        .select("fecha_ingreso, fecha_salida, cabana, estado")
-        .eq("cabana", cabana)
-        .in("estado", ESTADOS_QUE_BLOQUEAN);
-      if (error) { console.error(error); return; }
-      setReservasBloqueantes(data || []);
+        .select("id, cabana, fecha_ingreso, fecha_salida, estado");
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setReservas(data || []);
     };
+
     cargarReservas();
-  }, [cabana]);
+  }, []);
 
-  let noches = 0;
-  if (ingreso && salida) {
-    noches = Math.ceil((salida - ingreso) / (1000 * 60 * 60 * 24));
-  }
+  const tarifa = calcularTarifaReserva({
+    adultos,
+    ninosMenores,
+    fechaIngreso: ingreso,
+    fechaSalida: salida,
+  });
 
-  let valorNoche = 0;
-  const p = parseInt(personas, 10);
-  let tipoReserva = "semana";
+  const cabanasDisponibles = useMemo(
+    () =>
+      obtenerCabanasDisponibles({
+        reservas,
+        fechaIngreso: ingreso,
+        fechaSalida: salida,
+      }),
+    [reservas, ingreso, salida],
+  );
 
-if (ingreso) {
-  const dia = ingreso.getDay();
+  const rangoOk = rangoDisponible({
+    reservas,
+    fechaIngreso: ingreso,
+    fechaSalida: salida,
+    cabana,
+  });
 
-  if (dia === 5 || dia === 6 || dia === 0) {
-    tipoReserva = "festivo";
-  }
-}
-
-  if (tipoReserva === "semana") {
-    if (p === 1) valorNoche = 300000;
-    else if (p === 2) valorNoche = 420000;
-    else if (p === 3) valorNoche = 600000;
-    else if (p === 4) valorNoche = 780000;
-  } else {
-    if (p === 1) valorNoche = 600000;
-    else if (p === 2) valorNoche = 650000;
-    else if (p === 3) valorNoche = 890000;
-    else if (p === 4) valorNoche = 1130000;
-  }
-
-  const descuentoPct = noches === 2 ? 10 : noches === 3 ? 15 : 0;
-  const subtotal     = valorNoche * (noches > 0 ? noches : 1);
-  const descuentoVal = subtotal * (descuentoPct / 100);
-  const totalFinal   = subtotal - descuentoVal;
-  const anticipo     = totalFinal / 2;
-  const reservaOk    = Boolean(cabana) && noches > 0 && noches <= 3;
+  const reservaOk = tarifa.noches > 0 && tarifa.noches <= 3 && rangoOk;
 
   const handleIngresoChange = (date) => {
     setIngreso(date);
-    if (salida && date && (salida <= date || rangoEstaOcupado(date, salida))) {
-      setSalida(null);
-    }
+    if (salida && date && salida <= date) setSalida(null);
+  };
+
+  const fechaDisponibleIngreso = (date) => {
+    if (cabana) return !fechaOcupadaPorCabana(reservas, date, cabana);
+    return !fechaEstaLlena(reservas, date);
+  };
+
+  const fechaDisponibleSalida = (date) => {
+    if (!ingreso || date <= ingreso) return false;
+    return rangoDisponible({
+      reservas,
+      fechaIngreso: ingreso,
+      fechaSalida: date,
+      cabana,
+    });
+  };
+
+  const claseDia = (date) => {
+    if (cabana && fechaOcupadaPorCabana(reservas, date, cabana)) return "dia-ocupado";
+    if (!cabana && fechaEstaLlena(reservas, date)) return "dia-ocupado";
+    return "dia-disponible";
   };
 
   const enviarWhatsApp = async () => {
-    if (!nombre || !identificacion || !ocupacion || !residencia || !cabana ||
-        !correo  || !celular       || !ingreso   || !salida) {
+    if (!nombre || !identificacion || !ocupacion || !residencia || !correo || !celular || !ingreso || !salida) {
       alert("Por favor completa todos los campos.");
       return;
     }
-    if (noches > 3) {
-      alert("Para reservas superiores a 3 noches comunícate directamente con nuestro WhatsApp.");
+
+    if (tarifa.noches > 3) {
+      alert("Para reservas superiores a 3 noches comunicate directamente con nuestro WhatsApp.");
       return;
     }
-    if (rangoEstaOcupado(ingreso, salida)) {
-      alert("La cabaña seleccionada no está disponible en ese rango de fechas.");
+
+    const cabanaAsignada = asignarPrimeraCabanaDisponible({
+      reservas,
+      fechaIngreso: ingreso,
+      fechaSalida: salida,
+      cabanaPreferida: cabana,
+    });
+
+    if (!cabanaAsignada) {
+      alert("No hay cabañas disponibles para esas fechas. Prueba con otro rango.");
       return;
     }
+
     setCargando(true);
+
     try {
-      const { error } = await supabase.from("reservas").insert([{
-        nombre, correo, celular, identificacion, ocupacion, residencia, cabana,
-        fecha_ingreso: formatFechaLocal(ingreso),
-        fecha_salida:  formatFechaLocal(salida),
-        personas: p,
-        tipo_reserva: tipoReserva === "semana" ? "Entre semana" : "Fin de semana / Festivo",
-        anticipo,
-        total: totalFinal,
-        estado: "Pendiente",
-      }]);
-      if (error) { alert("No se pudo guardar. Intenta de nuevo."); return; }
-    } catch {
-      alert("Error de conexión."); return;
+      const { error } = await supabase.from("reservas").insert([
+        {
+          nombre,
+          correo,
+          celular,
+          identificacion,
+          ocupacion,
+          residencia,
+          cabana: cabanaAsignada,
+          fecha_ingreso: fechaToISO(ingreso),
+          fecha_salida: fechaToISO(salida),
+          adultos: tarifa.adultos,
+          ninos_menores: tarifa.ninosMenores,
+          personas: tarifa.personas,
+          tipo_reserva: tarifa.tipoReserva,
+          anticipo: tarifa.anticipo,
+          total: tarifa.total,
+          saldo_pendiente: tarifa.saldoPendiente,
+          estado: "Pendiente",
+          pago_confirmado: false,
+        },
+      ]);
+
+      if (error) {
+        alert(error.message || "No se pudo guardar. Intenta de nuevo.");
+        return;
+      }
+
+      const fmt = (d) => d?.toLocaleDateString("es-CO");
+      const mensaje = `
+REFUGIO LA ARBOLEDA - SOLICITUD DE RESERVA
+
+Nombre: ${nombre}
+Celular: ${celular}
+Cabaña: ${cabanaAsignada}
+Fecha ingreso: ${fmt(ingreso)}
+Fecha salida: ${fmt(salida)}
+Noches: ${tarifa.noches}
+Adultos: ${tarifa.adultos}
+Niños menores de 8 años: ${tarifa.ninosMenores}
+Total: $${formatoMoneda(tarifa.total)}
+Anticipo 40%: $${formatoMoneda(tarifa.anticipo)}
+Saldo pendiente al llegar: $${formatoMoneda(tarifa.saldoPendiente)}
+      `.trim();
+
+      window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
+    } catch (e) {
+      console.error(e);
+      alert("Error de conexion.");
     } finally {
       setCargando(false);
     }
-
-    const fmt       = (d) => d?.toLocaleDateString("es-CO");
-    const tipoLabel = tipoReserva === "semana" ? "Entre semana" : "Fin de semana / Festivo";
-
-    const mensaje = `
-REFUGIO LA ARBOLEDA - SOLICITUD DE RESERVA
-
-DATOS DEL HUÉSPED
-Nombre: ${nombre}
-Identificación: ${identificacion}
-Ocupación: ${ocupacion}
-Residencia: ${residencia}
-Cabaña: ${cabana}
-Correo: ${correo}
-Celular: ${celular}
-
-DETALLES
-Fecha ingreso: ${fmt(ingreso)}
-Fecha salida: ${fmt(salida)}
-Personas: ${p}
-Tipo: ${tipoLabel}
-Noches: ${noches}
-
-VALORES
-Valor por noche: $${valorNoche.toLocaleString("es-CO")}
-Subtotal: $${subtotal.toLocaleString("es-CO")}
-Descuento: ${descuentoPct}% (-$${descuentoVal.toLocaleString("es-CO")})
-Total: $${totalFinal.toLocaleString("es-CO")}
-Anticipo (50%): $${anticipo.toLocaleString("es-CO")}
-
-La reserva se confirma con el pago del anticipo del 50%.
-    `.trim();
-
-    window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
   };
 
   return (
@@ -202,32 +186,12 @@ La reserva se confirma con el pago del anticipo del 50%.
       <h2>Reserva tu Experiencia</h2>
 
       <form className="reserva-form" onSubmit={(e) => e.preventDefault()}>
-
-        <input type="text"  placeholder="Nombre Completo"          value={nombre}         onChange={(e) => setNombre(e.target.value)} />
-        <input type="text"  placeholder="Número de Identificación" value={identificacion} onChange={(e) => setIdentificacion(e.target.value)} />
-        <input type="text"  placeholder="Ocupación"                value={ocupacion}      onChange={(e) => setOcupacion(e.target.value)} />
-        <input type="text"  placeholder="Residencia"               value={residencia}     onChange={(e) => setResidencia(e.target.value)} />
-        <input type="email" placeholder="Correo Electrónico"       value={correo}         onChange={(e) => setCorreo(e.target.value)} />
-        <input type="text"  placeholder="Celular"                  value={celular}        onChange={(e) => setCelular(e.target.value)} />
-
-        <div className="cabana-box">
-          <label>🏡 Selecciona tu cabaña</label>
-
-          <select
-            className="cabana-select"
-            value={cabana}
-            onChange={(e) => {
-              setCabana(e.target.value);
-              setIngreso(null);
-              setSalida(null);
-            }}
-          >
-            <option value="">Selecciona una cabaña</option>
-            <option value="Cabaña 1">🏡 Cabaña 1</option>
-            <option value="Cabaña 2">🏡 Cabaña 2</option>
-            <option value="Cabaña 3">🏡 Cabaña 3</option>
-          </select>
-        </div>
+        <input type="text" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+        <input type="text" placeholder="Numero de identificacion" value={identificacion} onChange={(e) => setIdentificacion(e.target.value)} />
+        <input type="text" placeholder="Ocupacion" value={ocupacion} onChange={(e) => setOcupacion(e.target.value)} />
+        <input type="text" placeholder="Residencia" value={residencia} onChange={(e) => setResidencia(e.target.value)} />
+        <input type="email" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} />
+        <input type="text" placeholder="Celular" value={celular} onChange={(e) => setCelular(e.target.value)} />
 
         <div className="fechas-grid">
           <div>
@@ -239,21 +203,14 @@ La reserva se confirma con el pago del anticipo del 50%.
               placeholderText="Ingreso"
               minDate={new Date()}
               className="datepicker"
-              filterDate={(date) => !fechaEstaOcupada(date)}
-              disabled={!cabana}
+              filterDate={fechaDisponibleIngreso}
               locale="es"
               showPopperArrow={false}
               fixedHeight
-              dayClassName={(date) =>
-                fechaEstaOcupada(date) ? "dia-ocupado" : "dia-disponible"
-              }
-              renderDayContents={(day, date) => (
-                <span title={fechaEstaOcupada(date) ? "Fecha ocupada" : ""}>
-                  {day}
-                </span>
-              )}
+              dayClassName={claseDia}
             />
           </div>
+
           <div>
             <label>Fecha de salida</label>
             <DatePicker
@@ -261,86 +218,80 @@ La reserva se confirma con el pago del anticipo del 50%.
               onChange={(d) => setSalida(d)}
               dateFormat="dd/MM/yyyy"
               placeholderText="Salida"
-              minDate={
-                ingreso
-                  ? sumarDias(ingreso, 1)
-                  : new Date()
-              }
+              minDate={ingreso ? new Date(ingreso.getTime() + 86400000) : new Date()}
               className="datepicker"
-              filterDate={(date) =>
-                (!ingreso || !rangoEstaOcupado(ingreso, date))
-              }
-              disabled={!cabana || !ingreso}
+              filterDate={fechaDisponibleSalida}
+              disabled={!ingreso}
               locale="es"
               showPopperArrow={false}
               fixedHeight
-              dayClassName={(date) =>
-                ingreso && rangoEstaOcupado(ingreso, date) ? "dia-ocupado" : ""
-              }
-              renderDayContents={(day, date) => (
-                <span title={ingreso && rangoEstaOcupado(ingreso, date) ? "Rango no disponible" : ""}>
-                  {day}
-                </span>
-              )}
+              dayClassName={claseDia}
             />
+          </div>
+
+          <div className="cabana-box">
+            <label>Selecciona tu cabaña</label>
+            <select className="cabana-select" value={cabana} onChange={(e) => setCabana(e.target.value)}>
+              <option value="">Asignacion automatica</option>
+              {CABANAS.map((item) => (
+                <option key={item} value={item} disabled={ingreso && salida && !cabanasDisponibles.includes(item)}>
+                  {item}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {noches > 0 && (
-          <div className="info-noches"><strong>Noches:</strong> {noches}</div>
+        {ingreso && salida && (
+          <div className={rangoOk ? "disponibilidad-ok" : "mensaje-error"}>
+            {rangoOk
+              ? `Disponibles: ${cabanasDisponibles.join(", ")}`
+              : "No hay disponibilidad para esas fechas y cabaña."}
+          </div>
         )}
 
-        <select value={personas} onChange={(e) => setPersonas(e.target.value)}>
-          <option value="1">1 Persona</option>
-          <option value="2">2 Personas</option>
-          <option value="3">3 Personas</option>
-          <option value="4">4 Personas</option>
-        </select>
+        <div className="huespedes-grid">
+          <label>
+            Adultos
+            <input type="number" min="1" value={adultos} onChange={(e) => setAdultos(e.target.value)} />
+          </label>
+          <label>
+            Niños menores de 8 años
+            <input type="number" min="0" value={ninosMenores} onChange={(e) => setNinosMenores(e.target.value)} />
+          </label>
+        </div>
+
         <div className="tipo-reserva-auto">
-  Tipo de tarifa:
-  <strong>
-    {tipoReserva === "semana"
-      ? " Entre semana"
-      : " Fin de semana / Festivo"}
-  </strong>
-</div>
+          Tipo de tarifa: <strong>{tarifa.tipoReserva}</strong>
+        </div>
 
         <div className="precio-reserva">
           <h2>Resumen de Reserva</h2>
-          <div className="linea-resumen">
-            <span>Valor por noche</span>
-            <span>${valorNoche.toLocaleString("es-CO")}</span>
-          </div>
-          <div className="linea-resumen">
-            <span>Noches</span>
-            <span>{noches}</span>
-          </div>
-          <div className="linea-resumen">
-            <span>Subtotal</span>
-            <span>${subtotal.toLocaleString("es-CO")}</span>
-          </div>
-          <div className="linea-resumen">
-            <span>Descuento</span>
-            <span>{descuentoPct}%</span>
-          </div>
-          <div className="linea-resumen">
-            <span>Ahorro</span>
-            <span>${descuentoVal.toLocaleString("es-CO")}</span>
-          </div>
+          <div className="linea-resumen"><span>Cabaña seleccionada</span><span>{cabana || "Asignacion automatica"}</span></div>
+          <div className="linea-resumen"><span>Fecha ingreso</span><span>{ingreso ? ingreso.toLocaleDateString("es-CO") : "-"}</span></div>
+          <div className="linea-resumen"><span>Fecha salida</span><span>{salida ? salida.toLocaleDateString("es-CO") : "-"}</span></div>
+          <div className="linea-resumen"><span>Noches</span><span>{tarifa.noches}</span></div>
+          <div className="linea-resumen"><span>Adultos</span><span>{tarifa.adultos}</span></div>
+          <div className="linea-resumen"><span>Niños menores</span><span>{tarifa.ninosMenores}</span></div>
           <hr />
-          <div className="linea-total">
-            <span>Total</span>
-            <span>${totalFinal.toLocaleString("es-CO")}</span>
-          </div>
-          <div className="linea-anticipo">
-            <span>Anticipo (50%)</span>
-            <span>${anticipo.toLocaleString("es-CO")}</span>
-          </div>
+          {tarifa.desglose.map((item) => (
+            <div className="linea-resumen" key={item.label}>
+              <span>{item.label}</span>
+              <span>${formatoMoneda(item.valor)}</span>
+            </div>
+          ))}
+          {tarifa.noches > 1 && (
+            <div className="linea-resumen"><span>Valor por noche</span><span>${formatoMoneda(tarifa.valorNoche)}</span></div>
+          )}
+          <hr />
+          <div className="linea-total"><span>Total</span><span>${formatoMoneda(tarifa.total)}</span></div>
+          <div className="linea-anticipo"><span>Anticipo 40%</span><span>${formatoMoneda(tarifa.anticipo)}</span></div>
+          <div className="linea-saldo"><span>Saldo pendiente</span><span>${formatoMoneda(tarifa.saldoPendiente)}</span></div>
         </div>
 
-        {noches > 3 && (
+        {tarifa.noches > 3 && (
           <div className="mensaje-error">
-            Para reservas superiores a 3 noches comunícate directamente con nuestro WhatsApp.
+            Para reservas superiores a 3 noches comunicate directamente con nuestro WhatsApp.
           </div>
         )}
 
@@ -348,7 +299,7 @@ La reserva se confirma con el pago del anticipo del 50%.
           {cargando ? "Guardando..." : "Reservar por WhatsApp"}
         </button>
 
-        <p>Para confirmar la reserva se solicita un anticipo del 50%.</p>
+        <p>Para confirmar la reserva se solicita un anticipo del 40%.</p>
       </form>
     </section>
   );
