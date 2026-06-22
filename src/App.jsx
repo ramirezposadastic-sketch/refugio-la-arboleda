@@ -4,6 +4,7 @@ import Experiencia from "./components/Experiencia";
 import Cabañas from "./components/Cabañas";
 import Tarifas from "./components/Tarifas";
 import Reservas from "./components/Reservas";
+import Terminos from "./components/Terminos";
 import Contacto from "./components/Contacto";
 import Actividades from "./components/Actividades";
 import Ubicacion from "./components/Ubicacion";
@@ -21,6 +22,7 @@ function App() {
       <Actividades />
       <Ubicacion />
       <Reservas />
+      <Terminos />
       <Contacto />
      <a
   href="https://wa.me/573136303649"

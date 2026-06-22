@@ -316,6 +316,93 @@ body {
   font-weight: 700;
 }
 
+.calendario-ayuda {
+  background: #fbfdfb;
+  border: 1px solid #edf1ec;
+  border-radius: 10px;
+  color: #596654;
+  font-weight: 600;
+  line-height: 1.45;
+  padding: 12px 14px;
+  text-align: center;
+}
+
+.calendario-leyenda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 4px;
+}
+
+.calendario-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6a7566;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.leyenda-color {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  border: 1px solid transparent;
+}
+
+.leyenda-color.disponible {
+  background: #eef8f0;
+  border-color: #b8ddbf;
+}
+
+.leyenda-color.ocupado {
+  background: #f4f4f4;
+  border-color: #d7d7d7;
+}
+
+.leyenda-color.seleccionado {
+  background: #2e7d32;
+}
+
+.resumen-disponibilidad {
+  border-radius: 14px;
+  padding: 16px;
+  text-align: left;
+  border: 1px solid #e4eae2;
+  background: #fbfdfb;
+}
+
+.resumen-disponibilidad.disponible {
+  background: #eef8f0;
+  border-color: #b8ddbf;
+}
+
+.resumen-disponibilidad.no-disponible {
+  background: #fffaf0;
+  border-color: #efd9a4;
+}
+
+.resumen-disponibilidad .linea-resumen {
+  margin: 8px 0;
+}
+
+.resumen-disponibilidad p {
+  margin-top: 12px;
+  color: #4f5d4b;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.resumen-disponibilidad small {
+  display: block;
+  margin-top: 8px;
+  color: #246c2a;
+  font-weight: 700;
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -388,6 +475,115 @@ button:hover {
   font-size: 18px;
   font-weight: 700;
   color: #4a5d46;
+}
+
+.terminos-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  background: #f7faf7;
+  border: 1px solid #dce5dc;
+  border-radius: 14px;
+  padding: 15px;
+  color: #3d4a39;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.terminos-check input {
+  width: auto;
+  margin: 3px 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 18px;
+  height: 18px;
+  accent-color: #2e7d32;
+}
+
+.terminos-check a {
+  color: #1b5e20;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.terminos-check a:hover {
+  text-decoration: underline;
+}
+
+.terminos {
+  padding: 80px 50px;
+  background: #f5f7f5;
+}
+
+.terminos-contenido {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.terminos-etiqueta {
+  display: block;
+  color: #2e7d32;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-size: 0.78rem;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.terminos h2 {
+  font-size: 40px;
+  color: #1b5e20;
+  margin-bottom: 18px;
+  text-align: center;
+}
+
+.terminos-intro {
+  max-width: 760px;
+  margin: 0 auto 34px;
+  color: #4d5c49;
+  font-size: 18px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.terminos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.termino-card {
+  background: white;
+  border: 1px solid #e3ebe2;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.05);
+}
+
+.termino-card h3 {
+  color: #2e7d32;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.termino-card p {
+  color: #4f5d4b;
+  line-height: 1.55;
+}
+
+.terminos-cierre {
+  margin: 26px auto 0;
+  max-width: 820px;
+  background: #eef8f0;
+  border: 1px solid #b8ddbf;
+  color: #246c2a;
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .contacto {
@@ -714,6 +910,17 @@ button:hover {
   box-shadow: 0 4px 10px rgba(46, 125, 50, 0.35);
 }
 
+.dia-disponible {
+  background: #eef8f0;
+  color: #246c2a;
+  border: 1px solid transparent;
+}
+
+.dia-disponible:hover {
+  background: #dcefdc !important;
+  color: #1b5e20 !important;
+}
+
 /* DÍA OCUPADO / NO DISPONIBLE */
 .dia-ocupado {
   background-color: #f4f4f4 !important;
@@ -729,6 +936,26 @@ button:hover {
 .dia-ocupado:hover {
   background-color: #f4f4f4 !important;
   color: #b9b9b9 !important;
+}
+
+.dia-entrada,
+.dia-salida {
+  background: #2e7d32 !important;
+  color: white !important;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(46, 125, 50, 0.35);
+}
+
+.dia-rango {
+  background: #dcefdc !important;
+  color: #1b5e20 !important;
+  border-radius: 10px !important;
+  font-weight: 700;
+}
+
+.dia-sin-cabana {
+  color: #b6beb3 !important;
+  background: #f7f7f7 !important;
 }
 
 /* DÍA DESHABILITADO (fuera de rango, pasado, etc.) */
@@ -778,6 +1005,7 @@ button:hover {
   .cabañas,
   .tarifas,
   .reservas,
+  .terminos,
   .contacto,
   .actividades,
   .ubicacion {
@@ -804,6 +1032,24 @@ button:hover {
 
   .precio-reserva {
     padding: 20px;
+  }
+
+  .calendario-leyenda {
+    justify-content: flex-start;
+  }
+
+  .resumen-disponibilidad {
+    padding: 15px;
+  }
+
+  .resumen-disponibilidad .linea-resumen {
+    align-items: flex-start;
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .terminos-grid {
+    grid-template-columns: 1fr;
   }
 
   .whatsapp-float {
