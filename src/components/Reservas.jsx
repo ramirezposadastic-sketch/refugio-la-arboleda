@@ -16,6 +16,46 @@ import {
 
 registerLocale("es", es);
 
+const capitalizar = (texto) => texto.charAt(0).toUpperCase() + texto.slice(1);
+
+const obtenerMesAnio = (fecha) =>
+  capitalizar(
+    fecha.toLocaleDateString("es-CO", {
+      month: "long",
+      year: "numeric",
+    }).replace(/\s+de\s+/g, " "),
+  );
+
+const renderCalendarHeader = ({
+  date,
+  decreaseMonth,
+  increaseMonth,
+  prevMonthButtonDisabled,
+  nextMonthButtonDisabled,
+}) => (
+  <div className="calendario-header-custom">
+    <button
+      type="button"
+      className="calendario-nav-boton"
+      onClick={decreaseMonth}
+      disabled={prevMonthButtonDisabled}
+      aria-label="Mes anterior"
+    >
+      ‹
+    </button>
+    <span className="calendario-header-titulo">{obtenerMesAnio(date)}</span>
+    <button
+      type="button"
+      className="calendario-nav-boton"
+      onClick={increaseMonth}
+      disabled={nextMonthButtonDisabled}
+      aria-label="Mes siguiente"
+    >
+      ›
+    </button>
+  </div>
+);
+
 function Reservas() {
   const [nombre, setNombre] = useState("");
   const [correo, setCorreo] = useState("");
@@ -337,6 +377,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
               showPopperArrow={false}
               fixedHeight
               dayClassName={claseDia}
+              renderCustomHeader={renderCalendarHeader}
             />
           </div>
 
@@ -355,6 +396,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
               showPopperArrow={false}
               fixedHeight
               dayClassName={claseDia}
+              renderCustomHeader={renderCalendarHeader}
             />
           </div>
         </div>
