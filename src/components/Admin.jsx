@@ -14,6 +14,8 @@ import {
 const FILTRO_TODAS = "Todas";
 const FILTRO_TODOS = "Todos";
 const FILTRO_MES_ACTUAL = "Mes actual";
+const ROL_ADMIN = "admin";
+const ROL_EMPLEADO = "empleado";
 const MENSAJE_SIN_PERMISOS = "No tienes permisos para realizar esta acción.";
 
 function AdminLogin({ onLogin }) {
@@ -35,8 +37,8 @@ function AdminLogin({ onLogin }) {
     setCargando(false);
 
     if (error) {
-      console.error("Error de inicio de sesion:", error);
-      setErrorLogin(error.message || "No se pudo iniciar sesion. Revisa el correo y la contrasena.");
+      console.error("Error de inicio de sesión:", error);
+      setErrorLogin(error.message || "No se pudo iniciar sesión. Revisa el correo y la contraseña.");
       return;
     }
 
@@ -64,12 +66,12 @@ function AdminLogin({ onLogin }) {
         </label>
 
         <label>
-          Contrasena
+          Contraseña
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Tu contrasena"
+            placeholder="Tu contraseña"
             autoComplete="current-password"
             required
           />
@@ -78,7 +80,7 @@ function AdminLogin({ onLogin }) {
         {errorLogin && <div className="admin-login-error">{errorLogin}</div>}
 
         <button type="submit" disabled={cargando}>
-          {cargando ? "Iniciando..." : "Iniciar sesion"}
+          {cargando ? "Iniciando..." : "Iniciar sesión"}
         </button>
       </form>
     </section>
@@ -192,17 +194,28 @@ function aplicarCalculoAutomatico(reserva) {
   };
 }
 
+function normalizarRol(rol) {
+  return rol === ROL_EMPLEADO ? ROL_EMPLEADO : ROL_ADMIN;
+}
+
+function esReservaEliminada(reserva) {
+  return normalizarEstado(reserva?.estado) === "eliminada";
+}
+
 function Admin() {
   const [session, setSession] = useState(null);
   const [verificandoSesion, setVerificandoSesion] = useState(true);
   const [verificandoPermisos, setVerificandoPermisos] = useState(false);
   const [adminAutorizado, setAdminAutorizado] = useState(null);
+  const [rolUsuario, setRolUsuario] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState(FILTRO_TODAS);
   const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
   const [filtroPago, setFiltroPago] = useState(FILTRO_TODOS);
   const [filtroFecha, setFiltroFecha] = useState(FILTRO_TODOS);
   const [reservas, setReservas] = useState([]);
+  const [reservasEliminadas, setReservasEliminadas] = useState([]);
+  const [mostrarHistorialEliminadas, setMostrarHistorialEliminadas] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [reservaEditando, setReservaEditando] = useState(null);
   const [modoCrear, setModoCrear] = useState(false);
@@ -212,24 +225,30 @@ function Admin() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
-        console.error("Error verificando sesion:", error);
+        console.error("Error verificando sesión:", error);
       }
 
       setAdminAutorizado(null);
+      setRolUsuario(null);
       setVerificandoPermisos(Boolean(data.session));
       setReservas([]);
+      setReservasEliminadas([]);
+      setMostrarHistorialEliminadas(false);
       setSession(data.session || null);
       setVerificandoSesion(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nuevaSesion) => {
       setAdminAutorizado(null);
+      setRolUsuario(null);
       setVerificandoPermisos(Boolean(nuevaSesion));
       setSession(nuevaSesion || null);
       setMostrarModal(false);
       setReservaEditando(null);
       if (!nuevaSesion) {
         setReservas([]);
+        setReservasEliminadas([]);
+        setMostrarHistorialEliminadas(false);
       }
       setVerificandoSesion(false);
     });
@@ -244,44 +263,61 @@ function Admin() {
       return;
     }
 
-    supabase
-      .from("admin_users")
-      .select("id, user_id, email")
-      .eq("user_id", session.user.id)
-      .limit(1)
+    const buscarAdminUser = async (campo, valor, incluirRol = true) => {
+      let query = supabase
+        .from("admin_users")
+        .select(incluirRol ? "id, user_id, email, rol" : "id, user_id, email")
+        .limit(1);
+
+      query = campo === "email" ? query.ilike("email", valor) : query.eq(campo, valor);
+
+      const { data, error } = await query;
+
+      if (error && incluirRol && error.message?.toLowerCase().includes("rol")) {
+        return buscarAdminUser(campo, valor, false);
+      }
+
+      if (error) return { data: null, error };
+      return { data, error: null };
+    };
+
+    buscarAdminUser("user_id", session.user.id)
       .then(async ({ data, error }) => {
         if (error) {
           console.error("Error verificando permisos de admin por user_id:", error);
           setAdminAutorizado(false);
+          setRolUsuario(null);
           setReservas([]);
+          setReservasEliminadas([]);
           setVerificandoPermisos(false);
           return;
         }
 
         if (data?.length > 0) {
           setAdminAutorizado(true);
+          setRolUsuario(normalizarRol(data[0].rol));
           setVerificandoPermisos(false);
           return;
         }
 
-        const { data: emailData, error: emailError } = await supabase
-          .from("admin_users")
-          .select("id, user_id, email")
-          .eq("email", session.user.email)
-          .limit(1);
+        const { data: emailData, error: emailError } = await buscarAdminUser("email", session.user.email);
 
         if (emailError) {
           console.error("Error verificando permisos de admin por email:", emailError);
           setAdminAutorizado(false);
+          setRolUsuario(null);
           setReservas([]);
+          setReservasEliminadas([]);
           setVerificandoPermisos(false);
           return;
         }
 
         const autorizado = (emailData || []).length > 0;
         setAdminAutorizado(autorizado);
+        setRolUsuario(autorizado ? normalizarRol(emailData[0].rol) : null);
         if (!autorizado) {
           setReservas([]);
+          setReservasEliminadas([]);
         }
         setVerificandoPermisos(false);
       });
@@ -303,12 +339,55 @@ function Admin() {
           return;
         }
 
-        setReservas(ordenarReservas(data || []));
+        setReservas(ordenarReservas((data || []).filter((reserva) => !esReservaEliminada(reserva))));
       });
   }, [session, adminAutorizado]);
 
+  useEffect(() => {
+    if (!session || !adminAutorizado || rolUsuario !== ROL_ADMIN) {
+      return;
+    }
+
+    supabase
+      .from("reservas_eliminadas")
+      .select("*")
+      .order("eliminado_en", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("No se pudo cargar historial de eliminadas:", error);
+          setReservasEliminadas([]);
+          return;
+        }
+
+        setReservasEliminadas(data || []);
+      });
+  }, [session, adminAutorizado, rolUsuario]);
+
   const validarAdminAutorizado = () => {
     if (adminAutorizado !== true) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return false;
+    }
+
+    return true;
+  };
+
+  const esAdmin = rolUsuario === ROL_ADMIN;
+  const esEmpleado = rolUsuario === ROL_EMPLEADO;
+
+  const validarSoloAdmin = () => {
+    if (!validarAdminAutorizado()) return false;
+    if (!esAdmin) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return false;
+    }
+
+    return true;
+  };
+
+  const validarRolOperativo = () => {
+    if (!validarAdminAutorizado()) return false;
+    if (!esAdmin && !esEmpleado) {
       alert(MENSAJE_SIN_PERMISOS);
       return false;
     }
@@ -377,7 +456,7 @@ function Admin() {
   };
 
   const confirmarReserva = async (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), { estado: "Confirmada" });
     if (!reservaValidada) return;
@@ -403,7 +482,7 @@ function Admin() {
   };
 
   const confirmarPago = async (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), {
       estado: "Confirmada",
@@ -435,7 +514,7 @@ function Admin() {
   };
 
   const cancelarReserva = async (id) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     setAccionEnProceso(id);
 
@@ -458,16 +537,16 @@ function Admin() {
   };
 
   const editarReserva = (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
     setModoCrear(false);
-    setValoresManuales(true);
+    setValoresManuales(esAdmin);
     setReservaEditando(normalizarReservaParaEditar(reserva));
     setMostrarModal(true);
   };
 
   const nuevaReserva = () => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
     setModoCrear(true);
     setValoresManuales(false);
@@ -476,9 +555,21 @@ function Admin() {
   };
 
   const guardarEdicion = async () => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
-    const reservaValidada = validarReserva(reservaEditando);
+    const reservaOriginal = !modoCrear
+      ? reservas.find((item) => item.id === reservaEditando.id)
+      : null;
+
+    const reservaParaValidar = esAdmin
+      ? reservaEditando
+      : {
+          ...reservaEditando,
+          estado: reservaOriginal?.estado || "Pendiente",
+          pago_confirmado: Boolean(reservaOriginal?.pago_confirmado),
+        };
+
+    const reservaValidada = validarReserva(reservaParaValidar);
     if (!reservaValidada) return;
 
     const payload = {
@@ -495,9 +586,9 @@ function Admin() {
       anticipo: reservaValidada.anticipo,
       total: reservaValidada.total,
       saldo_pendiente: reservaValidada.saldo_pendiente,
-      estado: reservaValidada.estado || "Pendiente",
+      estado: esAdmin ? reservaValidada.estado || "Pendiente" : reservaOriginal?.estado || "Pendiente",
       observaciones: reservaValidada.observaciones || "",
-      pago_confirmado: reservaValidada.pago_confirmado,
+      pago_confirmado: esAdmin ? reservaValidada.pago_confirmado : Boolean(reservaOriginal?.pago_confirmado),
       fecha_ingreso: reservaValidada.fecha_ingreso,
       fecha_salida: reservaValidada.fecha_salida,
     };
@@ -530,7 +621,7 @@ function Admin() {
   };
 
   const eliminarReserva = async (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
     const id = reserva?.id;
 
@@ -540,34 +631,56 @@ function Admin() {
       return;
     }
 
-    if (!window.confirm("Deseas eliminar esta reserva?")) return;
+    const motivo = window.prompt("Motivo de eliminacion");
+
+    if (motivo === null) return;
+
+    const motivoLimpio = motivo.trim();
+
+    if (!motivoLimpio) {
+      alert("El motivo de eliminacion es obligatorio.");
+      return;
+    }
 
     setAccionEnProceso(id);
 
-    const { data, error } = await supabase
-      .from("reservas")
-      .delete()
-      .eq("id", id)
-      .select("id");
+    const { error } = await supabase.rpc("eliminar_reserva_con_motivo", {
+      p_reserva_id: id,
+      p_motivo: motivoLimpio,
+    });
 
     setAccionEnProceso(null);
 
     if (error) {
-      console.error("Error al eliminar reserva:", error);
-      alert(`No se pudo eliminar la reserva: ${error.message}`);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      console.error("Supabase no elimino ninguna reserva para el id:", id);
-      alert("No se elimino ninguna reserva. Revisa permisos de Supabase o que la reserva exista.");
+      console.error("Error al eliminar reserva con motivo:", error);
+      alert(`No se pudo eliminar la reserva. Verifica que ejecutaste supabase/roles-auditoria-admin.sql. Detalle: ${error.message}`);
       return;
     }
 
     setReservas((actuales) => actuales.filter((item) => item.id !== id));
+    if (esAdmin) {
+      setReservasEliminadas((actuales) => [
+        {
+          id: `local-${id}-${Date.now()}`,
+          reserva_id: id,
+          reserva_snapshot: reserva,
+          motivo: motivoLimpio,
+          eliminado_por: session?.user?.id || null,
+          eliminado_por_email: session?.user?.email || "",
+          eliminado_en: new Date().toISOString(),
+        },
+        ...actuales,
+      ]);
+    }
+    alert("Reserva eliminada y registrada en el historial.");
   };
 
   const actualizarCampoReserva = (campo, valor) => {
+    if (!esAdmin && ["estado", "pago_confirmado"].includes(campo)) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return;
+    }
+
     setReservaEditando((actual) => {
       const actualizada = { ...actual, [campo]: valor };
       if (valoresManuales) return actualizada;
@@ -581,6 +694,11 @@ function Admin() {
   };
 
   const actualizarImporte = (campo, valor) => {
+    if (!esAdmin) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return;
+    }
+
     const numero = Number(valor || 0);
     setValoresManuales(true);
     setReservaEditando((actual) => {
@@ -654,7 +772,7 @@ function Admin() {
   }, [reservas]);
 
   const exportarCsv = () => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     const columnas = [
       "nombre",
@@ -714,16 +832,19 @@ function Admin() {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.error("Error al cerrar sesion:", error);
-      alert(error.message || "No se pudo cerrar sesion.");
+      console.error("Error al cerrar sesión:", error);
+      alert(error.message || "No se pudo cerrar sesión.");
       return;
     }
 
     setAdminAutorizado(null);
+    setRolUsuario(null);
     setVerificandoPermisos(false);
     setAccionEnProceso(null);
     setSession(null);
     setReservas([]);
+    setReservasEliminadas([]);
+    setMostrarHistorialEliminadas(false);
   };
 
   if (verificandoSesion) {
@@ -766,7 +887,7 @@ function Admin() {
             No tienes permisos para acceder al panel administrativo.
           </div>
           <button type="button" onClick={cerrarSesion}>
-            Cerrar sesion
+            Cerrar sesión
           </button>
         </div>
       </section>
@@ -778,11 +899,20 @@ function Admin() {
       <div className="admin-header">
         <div>
           <h2>Panel de Reservas</h2>
-          <p>Gestion de disponibilidad, pagos y reportes.</p>
+          <p>Gestión de disponibilidad, pagos y reportes. Rol: {rolUsuario || "sin rol"}</p>
         </div>
         <div className="admin-header-actions">
-          <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>
-          <button className="btn-salir" onClick={cerrarSesion}>Cerrar sesion</button>
+          {esAdmin && <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>}
+          {esAdmin && (
+            <button
+              className="btn-historial"
+              type="button"
+              onClick={() => setMostrarHistorialEliminadas((valor) => !valor)}
+            >
+              {mostrarHistorialEliminadas ? "Ocultar eliminadas" : "Ver eliminadas"}
+            </button>
+          )}
+          <button className="btn-salir" onClick={cerrarSesion}>Cerrar sesión</button>
         </div>
       </div>
 
@@ -811,6 +941,50 @@ function Admin() {
           ))}
         </div>
       </div>
+
+      {esAdmin && mostrarHistorialEliminadas && (
+        <div className="admin-historial-eliminadas">
+          <h3>Historial de reservas eliminadas</h3>
+          <div className="admin-tabla-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Cabaña</th>
+                  <th>Ingreso</th>
+                  <th>Salida</th>
+                  <th>Total</th>
+                  <th>Eliminado por</th>
+                  <th>Fecha</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reservasEliminadas.map((item) => {
+                  const snapshot = item.reserva_snapshot || {};
+                  return (
+                    <tr key={item.id}>
+                      <td>{snapshot.nombre || "-"}</td>
+                      <td>{normalizarCabana(snapshot.cabana) || "-"}</td>
+                      <td>{fechaLegible(snapshot.fecha_ingreso)}</td>
+                      <td>{fechaLegible(snapshot.fecha_salida)}</td>
+                      <td>${formatoMoneda(valorTotal(snapshot))}</td>
+                      <td>{item.eliminado_por_email || "-"}</td>
+                      <td>{fechaLegible(item.eliminado_en)}</td>
+                      <td>{item.motivo}</td>
+                    </tr>
+                  );
+                })}
+                {reservasEliminadas.length === 0 && (
+                  <tr>
+                    <td colSpan="8">No hay reservas eliminadas registradas.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="admin-toolbar">
         <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
@@ -884,9 +1058,9 @@ function Admin() {
                 </td>
                 <td>
                   <div className="acciones acciones-admin">
-                    <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>
-                    <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>
-                    <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>
+                    {esAdmin && <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>}
+                    {esAdmin && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
+                    {esAdmin && <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>}
                     <button className="btn-editar" onClick={() => editarReserva(r)} disabled={accionEnProceso === r.id}>Editar</button>
                     <button className="btn-eliminar" onClick={() => eliminarReserva(r)} disabled={accionEnProceso === r.id}>
                       {accionEnProceso === r.id ? "Procesando..." : "Eliminar"}
@@ -909,9 +1083,9 @@ function Admin() {
               <div className="modal-grid">
                 <input type="text" placeholder="Nombre" value={reservaEditando.nombre || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, nombre: e.target.value })} />
                 <input type="text" placeholder="Celular" value={reservaEditando.celular || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, celular: e.target.value })} />
-                <input type="text" placeholder="Identificacion" value={reservaEditando.identificacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, identificacion: e.target.value })} />
+                <input type="text" placeholder="Identificación" value={reservaEditando.identificacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, identificacion: e.target.value })} />
                 <input type="email" placeholder="Correo" value={reservaEditando.correo || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, correo: e.target.value })} />
-                <input type="text" placeholder="Ocupacion" value={reservaEditando.ocupacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, ocupacion: e.target.value })} />
+                <input type="text" placeholder="Ocupación" value={reservaEditando.ocupacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, ocupacion: e.target.value })} />
                 <input type="text" placeholder="Residencia" value={reservaEditando.residencia || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, residencia: e.target.value })} />
               </div>
             </div>
@@ -922,7 +1096,7 @@ function Admin() {
                 <select value={normalizarCabana(reservaEditando.cabana) || CABANAS[0]} onChange={(e) => actualizarCampoReserva("cabana", e.target.value)}>
                   {CABANAS.map((item) => <option key={item}>{item}</option>)}
                 </select>
-                <select value={reservaEditando.estado || "Pendiente"} onChange={(e) => setReservaEditando({ ...reservaEditando, estado: e.target.value })}>
+                <select value={reservaEditando.estado || "Pendiente"} onChange={(e) => actualizarCampoReserva("estado", e.target.value)} disabled={!esAdmin}>
                   <option>Pendiente</option>
                   <option>Confirmada</option>
                   <option>Cancelada</option>
@@ -937,21 +1111,23 @@ function Admin() {
             <div className="modal-seccion">
               <h3>Valores</h3>
               <div className="modal-grid">
-                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} /></label>
-                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} /></label>
-                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} /></label>
+                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} disabled={!esAdmin} /></label>
+                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!esAdmin} /></label>
+                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!esAdmin} /></label>
               </div>
               <p className="nota-valores">
                 {valoresManuales
                   ? "Valores manuales activos."
-                  : "Los valores se recalculan automaticamente con fechas y huespedes."}
+                  : esAdmin
+                    ? "Los valores se recalculan automaticamente con fechas y huespedes."
+                    : "Empleado: los valores se recalculan automaticamente y no se pueden editar manualmente."}
               </p>
             </div>
 
             <textarea placeholder="Observaciones" value={reservaEditando.observaciones || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, observaciones: e.target.value })} />
 
             <label className="check-pago">
-              <input type="checkbox" checked={reservaEditando.pago_confirmado || false} onChange={(e) => setReservaEditando({ ...reservaEditando, pago_confirmado: e.target.checked })} />
+              <input type="checkbox" checked={reservaEditando.pago_confirmado || false} onChange={(e) => actualizarCampoReserva("pago_confirmado", e.target.checked)} disabled={!esAdmin} />
               Pago confirmado
             </label>
 

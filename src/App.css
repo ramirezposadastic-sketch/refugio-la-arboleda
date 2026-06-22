@@ -1630,6 +1630,7 @@ button:hover {
 }
 
 .btn-exportar,
+.btn-historial,
 .btn-nueva-reserva {
   width: auto;
   margin-top: 0;
@@ -1640,6 +1641,24 @@ button:hover {
 
 .btn-exportar {
   background: #1f6f43;
+}
+
+.btn-historial {
+  background: #34513a;
+}
+
+.admin-historial-eliminadas {
+  background: white;
+  border: 1px solid #e6ece4;
+  border-radius: 14px;
+  padding: 18px;
+  margin: 0 0 20px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.04);
+}
+
+.admin-historial-eliminadas h3 {
+  color: #1b5e20;
+  margin-bottom: 14px;
 }
 
 .admin-filtros-profesional {
@@ -1719,6 +1738,7 @@ button:hover {
   }
 
   .btn-exportar,
+  .btn-historial,
   .btn-nueva-reserva {
     width: 100%;
   }
