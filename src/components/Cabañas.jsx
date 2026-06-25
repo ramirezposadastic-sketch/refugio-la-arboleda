@@ -1,62 +1,61 @@
-function Cabañas() {
+import { FaCheckCircle } from "react-icons/fa";
+import { imagenesRefugio } from "../data/imagenesRefugio";
+
+const caracteristicas = [
+  "Cabaña de 45 metros cuadrados",
+  "Cama doble",
+  "Mezzanine con colchón auxiliar doble",
+  "Cocina básica equipada",
+  "TV",
+  "Aire acondicionado",
+  "Baño estilo premium",
+  "Terraza al aire libre",
+  "Jacuzzi con hidromasaje de 4 puestos",
+  "Malla tipo catamarán",
+  "Entorno natural",
+];
+
+function Cabanas() {
   return (
-    <section
-  id="cabanas"
-  className="cabañas"
-  data-aos="zoom-in"
->
-      <h2>Nuestras Cabañas</h2>
+    <section id="cabanas" className="cabanas seccion-premium" data-aos="zoom-in">
+      <div className="seccion-encabezado">
+        <span className="section-kicker">Descanso privado</span>
+        <h2>Cabañas de madera rodeadas de naturaleza</h2>
+        <p>
+          Contamos con 3 cabañas privadas del mismo diseño y equipamiento, rodeadas de naturaleza
+          y pensadas para el descanso. La asignación se realiza según disponibilidad.
+        </p>
+      </div>
 
-      <div className="cabañas-grid">
-
-        <div className="cabaña-card">
-          <h3>🏡 Cabaña Exclusiva</h3>
-
-          <ul>
-            <li>Jacuzzi natural privado</li>
-            <li>Malla catamarán</li>
-            <li>Aire acondicionado</li>
-            <li>WiFi</li>
-            <li>TV</li>
-            <li>Cocina dotada</li>
-            <li>Deck con vista a la naturaleza</li>
-            <li>Máximo 4 personas</li>
-          </ul>
+      <div className="cabanas-layout">
+        <div className="cabanas-galeria">
+          {imagenesRefugio.cabanas.map((imagen) => (
+            <article className="cabana-imagen-card" key={imagen.src}>
+              <img src={imagen.src} alt={imagen.alt} loading="lazy" decoding="async" />
+              <h3>{imagen.titulo}</h3>
+            </article>
+          ))}
         </div>
 
-        <div className="cabaña-card">
-          <h3>🌿 Confort y Naturaleza</h3>
+        <div className="cabana-detalle">
+          <h3>Todo lo necesario para desconectar</h3>
+          <p>
+            Una experiencia cálida, íntima y cómoda, con madera, aire fresco y espacios pensados
+            para disfrutar en pareja, familia o con amigos.
+          </p>
 
           <ul>
-            <li>Jacuzzi natural privado</li>
-            <li>Malla catamarán</li>
-            <li>Aire acondicionado</li>
-            <li>WiFi</li>
-            <li>TV</li>
-            <li>Cocina dotada</li>
-            <li>Deck panorámico</li>
-            <li>Máximo 4 personas</li>
+            {caracteristicas.map((item) => (
+              <li key={item}>
+                <FaCheckCircle aria-hidden="true" />
+                <span>{item}</span>
+              </li>
+            ))}
           </ul>
         </div>
-
-        <div className="cabaña-card">
-          <h3>✨ Experiencia Premium</h3>
-
-          <ul>
-            <li>Jacuzzi natural privado</li>
-            <li>Malla catamarán</li>
-            <li>Aire acondicionado</li>
-            <li>WiFi</li>
-            <li>TV</li>
-            <li>Cocina dotada</li>
-            <li>Vista privilegiada</li>
-            <li>Máximo 4 personas</li>
-          </ul>
-        </div>
-
       </div>
     </section>
   );
 }
 
-export default Cabañas;
+export default Cabanas;
