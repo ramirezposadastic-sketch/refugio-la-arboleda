@@ -1,32 +1,40 @@
+import { FaWhatsapp } from "react-icons/fa";
+import { imagenesRefugio } from "../data/imagenesRefugio";
+
 function Hero() {
+  const mensajeWhatsApp = encodeURIComponent(
+    "Hola, quiero información sobre Refugio La Arboleda",
+  );
+
   return (
     <section
       id="inicio"
-      className="hero"
+      className="hero hero-premium"
+      style={{ "--hero-image": `url(${imagenesRefugio.hero})` }}
     >
       <div className="hero-content">
+        <span className="section-kicker">Cabañas privadas en la naturaleza</span>
         <h1>Refugio La Arboleda</h1>
-
         <p>
-          Vive una experiencia única rodeado de naturaleza,
-          confort y bienestar.
+          Cabañas privadas junto a la naturaleza, con desayuno, tubing por el río y caminatas
+          ecológicas incluidas.
         </p>
 
         <div className="hero-buttons">
-
           <a href="#reservas" className="btn-reservar">
-            Reservar Ahora
+            Reservar ahora
           </a>
 
           <a
-            href="https://wa.me/573136303649?text=Hola,%20quiero%20información%20sobre%20Refugio%20La%20Arboleda"
+            href={`https://wa.me/573136303649?text=${mensajeWhatsApp}`}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="btn-whatsapp"
+            aria-label="Consultar Refugio La Arboleda por WhatsApp"
           >
-            WhatsApp
+            <FaWhatsapp aria-hidden="true" />
+            Consultar por WhatsApp
           </a>
-
         </div>
       </div>
     </section>

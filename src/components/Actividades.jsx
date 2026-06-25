@@ -1,44 +1,33 @@
+import { imagenesRefugio } from "../data/imagenesRefugio";
+
 function Actividades() {
   return (
-    <section
-  id="actividades"
-  className="actividades"
-  data-aos="zoom-in"
->
-      <h2>Actividades Incluidas</h2>
+    <section id="actividades" className="actividades seccion-premium" data-aos="zoom-in">
+      <div className="seccion-encabezado">
+        <span className="section-kicker">Experiencias incluidas</span>
+        <h2>Actividades para conectar con el entorno</h2>
+        <p>
+          Naturaleza, bienestar y momentos especiales incluidos para que la estadía sea más que
+          una noche de descanso.
+        </p>
+      </div>
 
-      <div className="actividades-grid">
-
-        <div className="actividad-card">
-          <h3>🥾 Caminata Ecológica</h3>
-          <p>Recorre senderos naturales guiados y disfruta del paisaje.</p>
-        </div>
-
-        <div className="actividad-card">
-          <h3>🛟 Tubing por el Río</h3>
-          <p>Una experiencia refrescante y divertida en contacto con la naturaleza.</p>
-        </div>
-
-        <div className="actividad-card">
-          <h3>🍫 Exfoliación con Chocolate</h3>
-          <p>Relajación y bienestar con una experiencia única.</p>
-        </div>
-
-        <div className="actividad-card">
-          <h3>🌿 Aromaterapia</h3>
-          <p>Momentos de descanso y conexión con tus sentidos.</p>
-        </div>
-
-        <div className="actividad-card">
-          <h3>💦 Piscinas Naturales</h3>
-          <p>Disfruta aguas cristalinas rodeadas de naturaleza.</p>
-        </div>
-
-        <div className="actividad-card">
-          <h3>🔥 Fogata con Chocolate Caliente</h3>
-          <p>Comparte momentos especiales bajo las estrellas.</p>
-        </div>
-
+      <div className="actividades-grid actividades-grid-premium">
+        {imagenesRefugio.actividades.map((actividad) => (
+          <article className="actividad-card actividad-card-premium" key={actividad.titulo}>
+            <img
+              src={actividad.src}
+              alt={actividad.alt}
+              loading="lazy"
+              decoding="async"
+            />
+            <div>
+              <h3>{actividad.titulo}</h3>
+              <p>{actividad.texto}</p>
+              {actividad.nota && <span>{actividad.nota}</span>}
+            </div>
+          </article>
+        ))}
       </div>
     </section>
   );

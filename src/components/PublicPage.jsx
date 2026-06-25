@@ -7,6 +7,7 @@ import Experiencia from "./Experiencia";
 import Cabañas from "./Cabañas";
 import Tarifas from "./Tarifas";
 import Actividades from "./Actividades";
+import Galeria from "./Galeria";
 import Ubicacion from "./Ubicacion";
 import Reservas from "./Reservas";
 import Terminos from "./Terminos";
@@ -27,6 +28,7 @@ function PublicPage() {
       <Cabañas />
       <Tarifas />
       <Actividades />
+      <Galeria />
       <Ubicacion />
       <Reservas />
       <Terminos />
@@ -36,7 +38,8 @@ function PublicPage() {
         href="https://wa.me/573136303649"
         className="whatsapp-float"
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
+        aria-label="Escribir a Refugio La Arboleda por WhatsApp"
       >
         <FaWhatsapp size={30} />
       </a>
