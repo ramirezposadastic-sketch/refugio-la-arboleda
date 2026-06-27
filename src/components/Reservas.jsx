@@ -71,6 +71,7 @@ function Reservas() {
   const [reservas, setReservas] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState("");
 
   useEffect(() => {
     const cargarReservas = async () => {
@@ -249,7 +250,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
     window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
   };
 
-  const enviarWhatsApp = async () => {
+  const enviarSolicitudReserva = async () => {
     if (!validarDatosContacto()) return;
     if (!validarDisponibilidad()) return;
     if (!validarTerminos()) return;
@@ -272,8 +273,12 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
     }
 
     setCargando(true);
+    setMensajeExito("");
 
     try {
+      const fechaIngresoISO = fechaToISO(ingreso);
+      const fechaSalidaISO = fechaToISO(salida);
+
       const { error } = await supabase.from("reservas").insert([
         {
           nombre,
@@ -283,8 +288,8 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
           ocupacion,
           residencia,
           cabana: cabanaAsignada,
-          fecha_ingreso: fechaToISO(ingreso),
-          fecha_salida: fechaToISO(salida),
+          fecha_ingreso: fechaIngresoISO,
+          fecha_salida: fechaSalidaISO,
           adultos: tarifa.adultos,
           ninos_menores: tarifa.ninosMenores,
           personas: tarifa.personas,
@@ -302,27 +307,19 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
         return;
       }
 
-      const fmt = (d) => d?.toLocaleDateString("es-CO");
-      const mensaje = `
-REFUGIO LA ARBOLEDA - SOLICITUD DE RESERVA
-
-Nombre: ${nombre}
-Celular: ${celular}
-Cabaña: ${cabanaAsignada}
-Fecha ingreso: ${fmt(ingreso)}
-Fecha salida: ${fmt(salida)}
-Noches: ${tarifa.noches}
-Adultos: ${tarifa.adultos}
-Niños menores de 8 años: ${tarifa.ninosMenores}
-Subtotal: $${formatoMoneda(tarifa.subtotalSinDescuento)}
-Descuento ${tarifa.descuentoPorcentaje}%: -$${formatoMoneda(tarifa.descuentoValor)}
-Total: $${formatoMoneda(tarifa.total)}
-Anticipo 40%: $${formatoMoneda(tarifa.anticipo)}
-Saldo pendiente al llegar: $${formatoMoneda(tarifa.saldoPendiente)}
-El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
-      `.trim();
-
-      window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
+      setReservas((reservasActuales) => [
+        ...reservasActuales,
+        {
+          id: `local-${Date.now()}`,
+          cabana: cabanaAsignada,
+          fecha_ingreso: fechaIngresoISO,
+          fecha_salida: fechaSalidaISO,
+          estado: "Pendiente",
+        },
+      ]);
+      setMensajeExito(
+        "Tu solicitud de reserva fue enviada correctamente. Pronto nos pondremos en contacto para confirmar disponibilidad y pago del anticipo.",
+      );
     } catch (e) {
       console.error(e);
       alert("Error de conexion.");
@@ -484,6 +481,8 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
           </div>
         )}
 
+        {mensajeExito && <div className="mensaje-exito">{mensajeExito}</div>}
+
         <label className="terminos-check">
           <input
             type="checkbox"
@@ -501,10 +500,19 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
             Consultar por WhatsApp
           </button>
         ) : (
-          <button type="button" onClick={enviarWhatsApp} disabled={cargando}>
-            {cargando ? "Guardando..." : "Reservar por WhatsApp"}
+          <button type="button" onClick={enviarSolicitudReserva} disabled={cargando}>
+            {cargando ? "Enviando..." : "Enviar solicitud de reserva"}
           </button>
         )}
+
+        <a
+          className="btn-consulta-whatsapp"
+          href="https://wa.me/573136303649"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Hablar por WhatsApp
+        </a>
 
         <p>Para confirmar la reserva se solicita un anticipo del 40%.</p>
       </form>

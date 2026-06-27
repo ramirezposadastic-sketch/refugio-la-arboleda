@@ -306,6 +306,17 @@ body {
   font-weight: bold;
 }
 
+.mensaje-exito {
+  margin-top: 15px;
+  background: #eef8ef;
+  border: 1px solid rgba(46, 125, 50, 0.24);
+  color: #1f4d2b;
+  padding: 16px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
 .disponibilidad-ok {
   margin-top: 15px;
   background: #eef8f0;
@@ -479,7 +490,7 @@ button:hover {
 
 .terminos-check {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   text-align: left;
   background: #f7faf7;
@@ -493,12 +504,17 @@ button:hover {
 
 .terminos-check input {
   width: auto;
-  margin: 3px 0 0;
+  margin: 0;
   padding: 0;
   border: 0;
   min-width: 18px;
   height: 18px;
+  flex: 0 0 18px;
   accent-color: #2e7d32;
+}
+
+.terminos-check span {
+  line-height: 1.45;
 }
 
 .terminos-check a {
@@ -509,6 +525,26 @@ button:hover {
 
 .terminos-check a:hover {
   text-decoration: underline;
+}
+
+.btn-consulta-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50px;
+  border: 1px solid rgba(31, 77, 43, 0.18);
+  border-radius: 10px;
+  background: #fbf7ee;
+  color: var(--verde-profundo);
+  font-weight: 850;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.btn-consulta-whatsapp:hover {
+  background: #f1eadc;
+  border-color: rgba(31, 77, 43, 0.32);
+  transform: translateY(-1px);
 }
 
 .terminos {
@@ -2757,9 +2793,14 @@ body {
 .hero-premium::after {
   content: "";
   position: absolute;
-  inset: auto 0 0;
-  height: 34%;
-  background: linear-gradient(180deg, rgba(250, 247, 239, 0), var(--marfil));
+  inset: auto 0 -1px;
+  height: 24%;
+  background: linear-gradient(
+    180deg,
+    rgba(250, 247, 239, 0) 0%,
+    rgba(250, 247, 239, 0.46) 58%,
+    var(--marfil) 100%
+  );
   pointer-events: none;
 }
 
@@ -2809,6 +2850,7 @@ body {
   border-radius: 999px;
   min-height: 52px;
   padding: 14px 24px;
+  box-sizing: border-box;
   box-shadow: 0 14px 28px rgba(18, 42, 24, 0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
@@ -2839,6 +2881,7 @@ body {
 
 .experiencia,
 .actividades,
+.beneficios-incluidos,
 .terminos,
 .contacto {
   background: var(--marfil);
@@ -2875,6 +2918,136 @@ body {
   color: #556151;
   font-size: 1.08rem;
   line-height: 1.7;
+}
+
+.beneficios-incluidos {
+  position: relative;
+  overflow: hidden;
+}
+
+.beneficios-incluidos::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(31, 77, 43, 0.07), rgba(198, 161, 91, 0.08)),
+    var(--marfil);
+  pointer-events: none;
+}
+
+.beneficios-contenido {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+  gap: 30px;
+  align-items: stretch;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.beneficios-copy {
+  border: 1px solid rgba(31, 77, 43, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.78);
+  padding: clamp(26px, 4vw, 42px);
+  box-shadow: var(--sombra-premium);
+}
+
+.beneficios-copy h2 {
+  color: var(--verde-profundo);
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+  margin: 10px 0 16px;
+}
+
+.beneficios-copy p {
+  color: var(--gris-texto);
+  font-size: 1.05rem;
+  line-height: 1.75;
+  margin: 0 0 26px;
+}
+
+.beneficios-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.beneficio-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 58px;
+  border: 1px solid rgba(31, 77, 43, 0.1);
+  border-radius: 8px;
+  background: rgba(250, 247, 239, 0.78);
+  padding: 14px;
+  color: #2c3a2f;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.beneficio-item svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--dorado);
+}
+
+.beneficios-rio-oro {
+  position: relative;
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid rgba(31, 77, 43, 0.12);
+  box-shadow: var(--sombra-premium);
+  background: var(--verde-profundo);
+}
+
+.beneficios-rio-oro img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 460px;
+  object-fit: cover;
+  opacity: 0.9;
+}
+
+.beneficios-rio-oro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(18, 42, 24, 0.08), rgba(18, 42, 24, 0.72));
+}
+
+.beneficios-rio-oro figcaption {
+  position: absolute;
+  z-index: 1;
+  left: 22px;
+  right: 22px;
+  bottom: 22px;
+  display: grid;
+  gap: 8px;
+  color: white;
+}
+
+.beneficios-rio-oro figcaption span {
+  width: fit-content;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.beneficios-rio-oro figcaption strong {
+  max-width: 460px;
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  line-height: 1.28;
 }
 
 .experiencia-grid {
@@ -3141,6 +3314,14 @@ body {
   .galeria-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .beneficios-contenido {
+    grid-template-columns: 1fr;
+  }
+
+  .beneficios-rio-oro img {
+    min-height: 360px;
+  }
 }
 
 @media (max-width: 768px) {
@@ -3162,13 +3343,32 @@ body {
       var(--hero-image) center/cover no-repeat;
   }
 
+  .hero-premium::after {
+    height: 18%;
+    background: linear-gradient(
+      180deg,
+      rgba(250, 247, 239, 0) 0%,
+      rgba(250, 247, 239, 0.42) 56%,
+      var(--marfil) 100%
+    );
+  }
+
   .hero-premium .hero-content {
     display: grid;
     justify-items: center;
+    width: 100%;
+  }
+
+  .hero-premium p {
+    width: min(100%, 310px);
+    max-width: calc(100vw - 48px);
+    overflow-wrap: break-word;
   }
 
   .hero-buttons {
     justify-content: center;
+    width: min(360px, calc(100vw - 32px));
+    margin: 0 auto;
   }
 
   .experiencia-grid,
@@ -3176,6 +3376,19 @@ body {
   .cabanas-galeria,
   .galeria-grid {
     grid-template-columns: 1fr;
+  }
+
+  .beneficios-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .beneficios-copy,
+  .beneficios-rio-oro {
+    border-radius: 8px;
+  }
+
+  .beneficios-rio-oro img {
+    min-height: 300px;
   }
 
   .galeria-item.destacado {
@@ -3201,6 +3414,11 @@ body {
   .hero-premium {
     min-height: 640px;
     padding: 86px 16px 70px;
+  }
+
+  .hero-buttons {
+    width: 100%;
+    max-width: calc(100vw - 32px);
   }
 
   .btn-reservar,
