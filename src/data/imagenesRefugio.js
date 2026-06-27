@@ -1,9 +1,12 @@
 const base = "/imagenes/refugio";
+const basePublic = "/imagenes";
 
 export const imagenesRefugio = {
   logo: `${base}/logo-refugio.png`,
   hero: `${base}/hero-cabana-exterior.jpg`,
   og: `${base}/og-refugio-la-arboleda.jpg`,
+  rioDeOro: `${basePublic}/RIo%20de%20oro.png`,
+  zonaVerde: `${basePublic}/actividad-zonaverde.jpg%20(101).jpeg`,
   cabanas: [
     {
       src: `${base}/cabana-habitacion.jpg`,
@@ -64,10 +67,10 @@ export const imagenesRefugio = {
       alt: "Exfoliación natural con chocolate en entorno natural",
     },
     {
-      src: `${base}/actividad-zonas.jpg`,
+      src: `${basePublic}/actividad-zonaverde.jpg%20(101).jpeg`,
       titulo: "Aromaterapia",
       texto: "Experiencia de relajación con aromas naturales en un entorno tranquilo.",
-      alt: "Zona natural y común para descanso en Refugio La Arboleda",
+      alt: "Sendero y puente de madera rodeado de zona verde",
     },
     {
       src: `${base}/actividad-rio.jpg`,
@@ -80,9 +83,43 @@ export const imagenesRefugio = {
 
 export const galeriaRefugio = [
   {
-    src: imagenesRefugio.hero,
-    alt: "Cabaña de madera de día en Refugio La Arboleda",
+    src: `${base}/actividad-naturaleza.jpg`,
+    alt: "Piscina natural con cascada rodeada de vegetación",
   },
-  ...imagenesRefugio.cabanas.map(({ src, alt }) => ({ src, alt })),
-  ...imagenesRefugio.actividades.map(({ src, alt }) => ({ src, alt })),
-].slice(0, 12);
+  {
+    src: `${base}/actividad-rio.jpg`,
+    alt: "Río natural rodeado de árboles y vegetación",
+  },
+  {
+    src: `${base}/actividad-tubing.jpg`,
+    alt: "Huéspedes disfrutando tubing en el río",
+  },
+  {
+    src: `${basePublic}/RIo%20de%20oro.png`,
+    alt: "Gran escultura de Río de Oro rodeada de bosque",
+  },
+  {
+    src: `${basePublic}/actividad-zonaverde.jpg%20(101).jpeg`,
+    alt: "Sendero y puente de madera rodeado de zona verde",
+  },
+  {
+    src: `${base}/actividad-fogata.jpg`,
+    alt: "Fogata nocturna en zona natural",
+  },
+  {
+    src: `${base}/actividad-exfoliacion.jpg`,
+    alt: "Experiencia de exfoliación natural con chocolate",
+  },
+  {
+    src: `${base}/cabana-terraza-jacuzzi.jpg`,
+    alt: "Terraza privada con jacuzzi rodeada de naturaleza",
+  },
+  {
+    src: `${base}/cabana-habitacion.jpg`,
+    alt: "Habitación principal de madera en Refugio La Arboleda",
+  },
+  {
+    src: `${base}/cabana-noche.jpg`,
+    alt: "Cabana iluminada de noche en Refugio La Arboleda",
+  },
+];

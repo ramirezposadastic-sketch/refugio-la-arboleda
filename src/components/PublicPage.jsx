@@ -6,6 +6,7 @@ import Hero from "./Hero";
 import Experiencia from "./Experiencia";
 import Cabañas from "./Cabañas";
 import Tarifas from "./Tarifas";
+import BeneficiosIncluidos from "./BeneficiosIncluidos";
 import Actividades from "./Actividades";
 import Galeria from "./Galeria";
 import Ubicacion from "./Ubicacion";
@@ -27,6 +28,7 @@ function PublicPage() {
       <Experiencia />
       <Cabañas />
       <Tarifas />
+      <BeneficiosIncluidos />
       <Actividades />
       <Galeria />
       <Ubicacion />
