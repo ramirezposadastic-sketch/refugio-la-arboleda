@@ -10,6 +10,7 @@ import {
   normalizarEstado,
   rangoDisponible,
 } from "../lib/reservas";
+import { generarMensajeReservaWhatsApp } from "../lib/notificacionesReserva";
 
 const FILTRO_TODAS = "Todas";
 const FILTRO_TODOS = "Todos";
@@ -738,6 +739,14 @@ function Admin() {
           fechaIngreso.getFullYear() === anioActual);
 
       return coincideBusqueda && coincideEstado && coincideCabana && coincidePago && coincideFecha;
+    }).sort((a, b) => {
+      const pendienteA = normalizarEstado(a.estado) === "pendiente";
+      const pendienteB = normalizarEstado(b.estado) === "pendiente";
+      if (pendienteA !== pendienteB) return pendienteA ? -1 : 1;
+      const fechaA = a.fecha_ingreso || "";
+      const fechaB = b.fecha_ingreso || "";
+      if (fechaA !== fechaB) return fechaA.localeCompare(fechaB);
+      return String(a.id || "").localeCompare(String(b.id || ""));
     });
   }, [reservas, busqueda, filtroEstado, filtroCabana, filtroPago, filtroFecha]);
 
@@ -819,6 +828,27 @@ function Admin() {
     link.download = `reservas-refugio-la-arboleda-${fechaToISO(new Date())}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  };
+
+  const copiarResumenReserva = async (reserva) => {
+    if (!validarAdminAutorizado()) return;
+
+    const resumen = generarMensajeReservaWhatsApp({
+      ...reserva,
+      total: valorTotal(reserva),
+      anticipo: valorAnticipo(reserva),
+      saldo_pendiente: valorSaldo(reserva),
+      adultos: adultosReserva(reserva),
+      ninos_menores: ninosReserva(reserva),
+    });
+
+    try {
+      await navigator.clipboard.writeText(resumen);
+      alert("Resumen de la reserva copiado.");
+    } catch (error) {
+      console.error("No se pudo copiar al portapapeles:", error);
+      alert("No se pudo copiar el resumen. Revisa permisos del navegador.");
+    }
   };
 
   const pendientes = reservas.filter((r) => normalizarEstado(r.estado) === "pendiente").length;
@@ -918,7 +948,7 @@ function Admin() {
 
       <div className="admin-stats admin-stats-profesional">
         <div className="stat-card"><h3>{reservas.length}</h3><p>Total de reservas</p></div>
-        <div className="stat-card pendiente"><h3>{pendientes}</h3><p>Pendientes</p></div>
+        <div className="stat-card pendiente solicitudes-nuevas"><h3>{pendientes}</h3><p>Solicitudes nuevas</p><span>Revisar primero</span></div>
         <div className="stat-card confirmada"><h3>{confirmadas}</h3><p>Confirmadas</p></div>
         <div className="stat-card cancelada"><h3>{canceladas}</h3><p>Canceladas</p></div>
         <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
@@ -1036,9 +1066,14 @@ function Admin() {
             </tr>
           </thead>
           <tbody>
-            {reservasFiltradas.map((r) => (
-              <tr key={r.id}>
-                <td>{r.nombre}</td>
+            {reservasFiltradas.map((r) => {
+              const esPendiente = normalizarEstado(r.estado) === "pendiente";
+              return (
+              <tr key={r.id} className={esPendiente ? "reserva-pendiente-row" : ""}>
+                <td>
+                  <span className="cliente-admin">{r.nombre}</span>
+                  {esPendiente && <span className="badge-nueva">Nueva</span>}
+                </td>
                 <td>{r.celular}</td>
                 <td>{normalizarCabana(r.cabana)}</td>
                 <td>{fechaLegible(r.fecha_ingreso)}</td>
@@ -1062,13 +1097,15 @@ function Admin() {
                     {esAdmin && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
                     {esAdmin && <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>}
                     <button className="btn-editar" onClick={() => editarReserva(r)} disabled={accionEnProceso === r.id}>Editar</button>
+                    <button className="btn-copiar" onClick={() => copiarResumenReserva(r)} disabled={accionEnProceso === r.id}>Copiar resumen</button>
                     <button className="btn-eliminar" onClick={() => eliminarReserva(r)} disabled={accionEnProceso === r.id}>
                       {accionEnProceso === r.id ? "Procesando..." : "Eliminar"}
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

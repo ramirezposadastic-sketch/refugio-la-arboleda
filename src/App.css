@@ -317,6 +317,41 @@ body {
   line-height: 1.5;
 }
 
+.bloque-exito-reserva {
+  display: grid;
+  gap: 10px;
+}
+
+.bloque-exito-reserva p {
+  margin: 0;
+  color: #2c4931;
+  font-weight: 650;
+}
+
+.estado-solicitud-v1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: #2c4931;
+}
+
+.estado-solicitud-v1 span {
+  border-radius: 999px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #8a5d00;
+  padding: 4px 10px;
+  font-weight: 850;
+}
+
+.acciones-pago-v1 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
 .disponibilidad-ok {
   margin-top: 15px;
   background: #eef8f0;
@@ -545,6 +580,15 @@ button:hover {
   background: #f1eadc;
   border-color: rgba(31, 77, 43, 0.32);
   transform: translateY(-1px);
+}
+
+.reserva-form .btn-pagar-anticipo {
+  background: #c6a15b;
+  color: #1f2b1e;
+}
+
+.reserva-form .btn-pagar-anticipo:hover {
+  background: #b8924d;
 }
 
 .terminos {
@@ -1195,6 +1239,22 @@ button:hover {
 .stat-card.anticipos h3  { color: #6a1b9a; font-size: 1.4rem; }
 .stat-card.ingresos h3   { color: #00796b; font-size: 1.4rem; }
 
+.stat-card.solicitudes-nuevas {
+  border: 1px solid #ffe082;
+  background: linear-gradient(180deg, #fffdf4, #ffffff);
+}
+
+.stat-card.solicitudes-nuevas span {
+  display: inline-flex;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: #fff8e1;
+  color: #8a5d00;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .admin-reportes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1322,6 +1382,29 @@ button:hover {
 .estado.confirmada { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
 .estado.cancelada  { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
 
+.reserva-pendiente-row td {
+  background: #fffdf4;
+}
+
+.cliente-admin {
+  display: block;
+  font-weight: 750;
+}
+
+.badge-nueva {
+  display: inline-flex;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #fff3cd;
+  color: #8a5d00;
+  border: 1px solid #ffe082;
+  padding: 3px 9px;
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 /* --- Pago badges --- */
 .pago-ok {
   display: inline-block;
@@ -1359,7 +1442,8 @@ button:hover {
 .btn-cancelar,
 .btn-editar,
 .btn-eliminar,
-.btn-pago {
+.btn-pago,
+.btn-copiar {
   border: none;
   padding: 5px 10px;
   border-radius: 7px;
@@ -1381,7 +1465,8 @@ button:hover {
 .btn-cancelar:hover,
 .btn-editar:hover,
 .btn-eliminar:hover,
-.btn-pago:hover {
+.btn-pago:hover,
+.btn-copiar:hover {
   opacity: 0.82;
   transform: translateY(-1px);
 }
@@ -1391,6 +1476,7 @@ button:hover {
 .btn-editar    { background: #f9a825; }
 .btn-eliminar  { background: #424242; }
 .btn-pago      { background: #1565c0; }
+.btn-copiar    { background: #6f8f72; }
 
 .btn-nueva-reserva {
   background: #2e7d32;
@@ -3577,5 +3663,9 @@ body {
 
   .logo-marca span {
     font-size: 1rem;
+  }
+
+  .acciones-pago-v1 {
+    grid-template-columns: 1fr;
   }
 }

@@ -3,6 +3,7 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from "date-fns/locale";
 import { supabase } from "../supabase";
+import { pagosConfig } from "../config/pagos";
 import {
   CABANAS,
   asignarPrimeraCabanaDisponible,
@@ -250,6 +251,15 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
     window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
   };
 
+  const pagarAnticipo = () => {
+    if (pagosConfig.boldActivo && pagosConfig.boldLinkGeneral) {
+      window.open(pagosConfig.boldLinkGeneral, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    alert(pagosConfig.mensajeSinPago);
+  };
+
   const enviarSolicitudReserva = async () => {
     if (!validarDatosContacto()) return;
     if (!validarDisponibilidad()) return;
@@ -481,7 +491,29 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
           </div>
         )}
 
-        {mensajeExito && <div className="mensaje-exito">{mensajeExito}</div>}
+        {mensajeExito && (
+          <div className="mensaje-exito bloque-exito-reserva">
+            <strong>{mensajeExito}</strong>
+            <div className="estado-solicitud-v1">
+              Estado de la solicitud: <span>Pendiente de confirmación</span>
+            </div>
+            <p>Para confirmar la reserva se solicita un anticipo del 40%.</p>
+            <p>El anticipo se confirma manualmente por el equipo de Refugio La Arboleda.</p>
+            <div className="acciones-pago-v1">
+              <a
+                className="btn-consulta-whatsapp"
+                href="https://wa.me/573136303649"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Hablar por WhatsApp
+              </a>
+              <button type="button" className="btn-pagar-anticipo" onClick={pagarAnticipo}>
+                Pagar anticipo
+              </button>
+            </div>
+          </div>
+        )}
 
         <label className="terminos-check">
           <input
@@ -504,15 +536,6 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
             {cargando ? "Enviando..." : "Enviar solicitud de reserva"}
           </button>
         )}
-
-        <a
-          className="btn-consulta-whatsapp"
-          href="https://wa.me/573136303649"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Hablar por WhatsApp
-        </a>
 
         <p>Para confirmar la reserva se solicita un anticipo del 40%.</p>
       </form>
