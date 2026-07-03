@@ -1,6 +1,10 @@
 import { galeriaRefugio } from "../data/imagenesRefugio";
+import { seleccionarFotosDinamicas } from "../lib/fotosSitio";
 
-function Galeria() {
+function Galeria({ fotosDinamicas }) {
+  const fotosAdmin = seleccionarFotosDinamicas(fotosDinamicas, ["galeria"]);
+  const imagenesGaleria = fotosAdmin.length > 0 ? fotosAdmin : galeriaRefugio;
+
   return (
     <section id="galeria" className="galeria seccion-premium">
       <div className="seccion-encabezado">
@@ -13,7 +17,7 @@ function Galeria() {
       </div>
 
       <div className="galeria-grid">
-        {galeriaRefugio.map((imagen, index) => (
+        {imagenesGaleria.map((imagen, index) => (
           <figure className={index === 0 ? "galeria-item destacado" : "galeria-item"} key={imagen.src}>
             <img
               src={imagen.src}

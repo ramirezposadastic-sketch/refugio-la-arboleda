@@ -4,9 +4,9 @@
 
 - [ ] Navbar.
 - [ ] Hero.
+- [ ] Experiencias.
 - [ ] Cabañas.
 - [ ] Tarifas.
-- [ ] Actividades.
 - [ ] Galería.
 - [ ] Río de Oro.
 - [ ] Reservas.
@@ -22,37 +22,48 @@
 - [ ] Reserva de más de 3 noches.
 - [ ] Reserva con 1 adulto + 1 niño.
 - [ ] Reserva con 2 adultos.
-- [ ] Cabaña ocupada bloquea fechas.
-- [ ] Checkout libre permite nueva entrada el día de salida.
+- [ ] Anticipo 40%.
 - [ ] Términos obligatorios.
+- [ ] Envío correcto.
+- [ ] No doble envío después de solicitud exitosa.
 - [ ] Guardado correcto en Supabase.
+
+## Pagos
+
+- [ ] Botón Pagar anticipo sin Bold configurado.
+- [ ] Mensaje correcto de pago no disponible.
+- [ ] Valor exacto del anticipo visible después de enviar solicitud.
+- [ ] WhatsApp como respaldo.
+- [ ] Admin mantiene confirmación manual de pago.
+- [ ] No se marca pago como recibido automáticamente.
 
 ## Admin
 
 - [ ] Login admin.
 - [ ] Login empleado.
 - [ ] Usuario no autorizado bloqueado.
+- [ ] Reservas pendientes destacadas.
 - [ ] Crear reserva.
 - [ ] Editar reserva.
-- [ ] Confirmar reserva.
 - [ ] Confirmar pago.
-- [ ] Cancelar reserva.
+- [ ] Confirmar reserva.
+- [ ] Cancelar.
 - [ ] Eliminar con motivo.
-- [ ] Historial de eliminadas.
-- [ ] Exportar reservas.
+- [ ] Historial eliminadas.
+- [ ] Exportar.
 - [ ] Copiar resumen de reserva.
-- [ ] Reservas pendientes destacadas.
+- [ ] Ver información de pago si existe.
 
 ## Supabase
 
-- [ ] Reservas se guardan.
-- [ ] Reservas pendientes bloquean disponibilidad.
-- [ ] Reservas confirmadas bloquean disponibilidad.
-- [ ] Reservas canceladas no bloquean disponibilidad.
-- [ ] Reservas eliminadas no bloquean disponibilidad.
-- [ ] Tabla `admin_users` contiene los usuarios autorizados.
-- [ ] RPC de disponibilidad funciona para la página pública.
-- [ ] RPC de eliminación con motivo funciona para Admin.
+- [ ] Reserva aparece en tabla `reservas`.
+- [ ] Pendiente bloquea disponibilidad.
+- [ ] Confirmada bloquea disponibilidad.
+- [ ] Cancelada no bloquea disponibilidad.
+- [ ] Eliminada no bloquea disponibilidad.
+- [ ] SQL `preparacion-bold-v1.sql` revisado antes de ejecutar.
+- [ ] Edge Function `crear-pago-bold` queda como plantilla.
+- [ ] Edge Function `bold-webhook` queda como plantilla.
 
 ## SEO
 
@@ -62,9 +73,29 @@
 - [ ] Favicon.
 - [ ] Título y descripción correctos.
 
-## Pagos V1
+## Pruebas finales agregadas
 
-- [ ] El sistema muestra anticipo 40%.
-- [ ] El botón Pagar anticipo muestra aviso si Bold no está activo.
-- [ ] Pago recibido se confirma manualmente desde Admin.
-- [ ] Bold automático queda pendiente para fase 2.
+### Correos
+
+- Crear una reserva con correo válido.
+- Verificar correo interno en `refugiolaarboleda@gmail.com`.
+- Verificar correo al cliente con texto de solicitud recibida, no confirmada.
+- Probar qué ocurre si faltan secretos de correo: la reserva debe quedar guardada igual.
+
+### Admin
+
+- Ver tarjetas de `Estado de reservas` agrupadas.
+- Ver tarjetas de `Resumen financiero` agrupadas.
+- Confirmar que ventas, anticipos, saldos e ingresos del mes mantienen los mismos cálculos.
+
+### Fotos
+
+- Entrar como admin.
+- Abrir `Gestión de fotos`.
+- Subir una foto al bucket `imagenes-refugio`.
+- Asignar categoría y título.
+- Ver vista previa y copiar URL.
+- Activar/desactivar foto.
+- Eliminar foto.
+- Confirmar que la página pública no se rompe si no hay fotos dinámicas.
+- Confirmar fallback a imágenes locales.

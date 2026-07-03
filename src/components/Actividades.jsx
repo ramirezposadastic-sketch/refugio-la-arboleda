@@ -1,6 +1,10 @@
 import { imagenesRefugio } from "../data/imagenesRefugio";
+import { seleccionarFotosDinamicas } from "../lib/fotosSitio";
 
-function Actividades() {
+function Actividades({ fotosDinamicas }) {
+  const fotosAdmin = seleccionarFotosDinamicas(fotosDinamicas, ["actividades", "rio", "zonas"]);
+  const imagenesActividades = fotosAdmin.length > 0 ? fotosAdmin : imagenesRefugio.actividades;
+
   return (
     <section id="actividades" className="actividades seccion-premium" data-aos="zoom-in">
       <div className="seccion-encabezado">
@@ -13,7 +17,7 @@ function Actividades() {
       </div>
 
       <div className="actividades-grid actividades-grid-premium">
-        {imagenesRefugio.actividades.map((actividad) => (
+        {imagenesActividades.map((actividad) => (
           <article className="actividad-card actividad-card-premium" key={actividad.titulo}>
             <img
               src={actividad.src}
