@@ -1,6 +1,6 @@
 import { FaCheckCircle } from "react-icons/fa";
 import { imagenesRefugio } from "../data/imagenesRefugio";
-import { seleccionarFotosDinamicas } from "../lib/fotosSitio";
+import { combinarImagenesConDinamicas } from "../lib/fotosSitio";
 
 const caracteristicas = [
   "Cabaña de 45 metros cuadrados",
@@ -17,8 +17,11 @@ const caracteristicas = [
 ];
 
 function Cabanas({ fotosDinamicas }) {
-  const fotosAdmin = seleccionarFotosDinamicas(fotosDinamicas, ["cabanas", "interior", "exterior"]);
-  const imagenesCabanas = fotosAdmin.length > 0 ? fotosAdmin : imagenesRefugio.cabanas;
+  const imagenesCabanas = combinarImagenesConDinamicas(
+    imagenesRefugio.cabanas,
+    fotosDinamicas,
+    ["cabanas", "interior", "exterior"],
+  );
 
   return (
     <section id="cabanas" className="cabanas seccion-premium" data-aos="zoom-in">
