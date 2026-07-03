@@ -4266,3 +4266,22 @@ body {
     max-width: 100%;
   }
 }
+
+/* --- Centrado móvil del badge de solicitud recibida --- */
+@media (max-width: 768px) {
+  .confirmacion-reserva-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+  }
+
+  .confirmacion-reserva-card .estado-solicitud-v1 {
+    align-self: center;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto;
+    text-align: center;
+  }
+}
