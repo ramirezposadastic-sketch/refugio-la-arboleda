@@ -1,9 +1,8 @@
 import { galeriaRefugio } from "../data/imagenesRefugio";
-import { seleccionarFotosDinamicas } from "../lib/fotosSitio";
+import { combinarImagenesConDinamicas } from "../lib/fotosSitio";
 
 function Galeria({ fotosDinamicas }) {
-  const fotosAdmin = seleccionarFotosDinamicas(fotosDinamicas, ["galeria"]);
-  const imagenesGaleria = fotosAdmin.length > 0 ? fotosAdmin : galeriaRefugio;
+  const imagenesGaleria = combinarImagenesConDinamicas(galeriaRefugio, fotosDinamicas, ["galeria"]);
 
   return (
     <section id="galeria" className="galeria seccion-premium">

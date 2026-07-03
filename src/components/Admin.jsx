@@ -11,6 +11,7 @@ import {
   rangoDisponible,
 } from "../lib/reservas";
 import { generarMensajeReservaWhatsApp } from "../lib/notificacionesReserva";
+import { formatearFechaHoraColombia, formatearFechaReserva } from "../utils/fechas";
 
 const FILTRO_TODAS = "Todas";
 const FILTRO_TODOS = "Todos";
@@ -136,8 +137,11 @@ function personasReserva(reserva) {
 }
 
 function fechaLegible(fecha) {
-  if (!fecha) return "-";
-  return new Date(`${fecha.slice(0, 10)}T00:00:00`).toLocaleDateString("es-CO");
+  return formatearFechaReserva(fecha);
+}
+
+function fechaHoraLegible(fecha) {
+  return formatearFechaHoraColombia(fecha);
 }
 
 function ordenarReservas(reservas) {
@@ -1357,7 +1361,7 @@ function Admin() {
                       <td>{fechaLegible(snapshot.fecha_salida)}</td>
                       <td>${formatoMoneda(valorTotal(snapshot))}</td>
                       <td>{item.eliminado_por_email || "-"}</td>
-                      <td>{fechaLegible(item.eliminado_en)}</td>
+                      <td>{fechaHoraLegible(item.eliminado_en)}</td>
                       <td>{item.motivo}</td>
                     </tr>
                   );

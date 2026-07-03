@@ -48,3 +48,16 @@ export function seleccionarFotosDinamicas(grupos, categorias) {
   if (!grupos) return [];
   return categorias.flatMap((categoria) => grupos[categoria] || []).map(fotoDinamicaAImagen);
 }
+
+
+export function combinarImagenesConDinamicas(imagenesLocales = [], grupos, categorias) {
+  const fotosAdmin = seleccionarFotosDinamicas(grupos, categorias);
+  const urlsVistas = new Set();
+
+  return [...imagenesLocales, ...fotosAdmin].filter((imagen) => {
+    const url = imagen?.src || imagen?.url;
+    if (!url || urlsVistas.has(url)) return false;
+    urlsVistas.add(url);
+    return true;
+  });
+}

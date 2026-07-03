@@ -19,14 +19,36 @@ const moneda = (valor: unknown) =>
 
 const fecha = (valor: unknown) => {
   if (!valor || typeof valor !== "string") return "Pendiente";
-  return new Date(`${valor.slice(0, 10)}T00:00:00`).toLocaleDateString("es-CO");
+  const [anio, mes, dia] = valor.slice(0, 10).split("-");
+  if (!anio || !mes || !dia) return "Pendiente";
+  return dia.padStart(2, "0") + "/" + mes.padStart(2, "0") + "/" + anio;
+};
+
+function formatearFechaColombia(fecha: unknown) {
+  if (!fecha) return "No disponible";
+
+  const date = new Date(String(fecha));
+
+  if (Number.isNaN(date.getTime())) {
+    return "No disponible";
+  }
+
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).format(date);
+}
+
+const diasDesdeFecha = (valor: string) => {
+  const [anio, mes, dia] = valor.slice(0, 10).split("-").map(Number);
+  return Date.UTC(anio, mes - 1, dia) / 86400000;
 };
 
 const noches = (ingreso?: string, salida?: string) => {
   if (!ingreso || !salida) return 0;
-  const inicio = new Date(`${ingreso.slice(0, 10)}T00:00:00`).getTime();
-  const fin = new Date(`${salida.slice(0, 10)}T00:00:00`).getTime();
-  return Math.max(0, Math.round((fin - inicio) / 86400000));
+  return Math.max(0, Math.round(diasDesdeFecha(salida) - diasDesdeFecha(ingreso)));
 };
 
 const normalizarReservaId = (valor: unknown) => {
@@ -68,7 +90,7 @@ const resumenReserva = (reserva: Reserva) => {
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Anticipo 40%</td><td style="padding:8px;border-bottom:1px solid #eee;">${moneda(anticipo)}</td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Saldo pendiente</td><td style="padding:8px;border-bottom:1px solid #eee;">${moneda(saldo)}</td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Estado</td><td style="padding:8px;border-bottom:1px solid #eee;">Pendiente de confirmación</td></tr>
-      <tr><td style="padding:8px;border-bottom:1px solid #eee;">Fecha de creación</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.created_at ? new Date(reserva.created_at).toLocaleString("es-CO") : "-"}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #eee;">Fecha de solicitud</td><td style="padding:8px;border-bottom:1px solid #eee;">${formatearFechaColombia(reserva.created_at)}</td></tr>
     </table>
   `;
 };
@@ -259,3 +281,5 @@ serve(async (req) => {
     );
   }
 });
+
+

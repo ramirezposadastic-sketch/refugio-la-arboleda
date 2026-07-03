@@ -1,8 +1,9 @@
-import { calcularNoches, formatoMoneda } from "./reservas";
+﻿import { calcularNoches, formatoMoneda } from "./reservas";
+import { formatearFechaReserva } from "../utils/fechas";
 
 function fechaLegible(fecha) {
-  if (!fecha) return "-";
-  return new Date(`${String(fecha).slice(0, 10)}T00:00:00`).toLocaleDateString("es-CO");
+  if (!fecha) return "Pendiente";
+  return formatearFechaReserva(fecha);
 }
 
 function valorReserva(reserva, campo) {

@@ -1,9 +1,12 @@
 import { imagenesRefugio } from "../data/imagenesRefugio";
-import { seleccionarFotosDinamicas } from "../lib/fotosSitio";
+import { combinarImagenesConDinamicas } from "../lib/fotosSitio";
 
 function Actividades({ fotosDinamicas }) {
-  const fotosAdmin = seleccionarFotosDinamicas(fotosDinamicas, ["actividades", "rio", "zonas"]);
-  const imagenesActividades = fotosAdmin.length > 0 ? fotosAdmin : imagenesRefugio.actividades;
+  const imagenesActividades = combinarImagenesConDinamicas(
+    imagenesRefugio.actividades,
+    fotosDinamicas,
+    ["actividades", "rio", "zonas"],
+  );
 
   return (
     <section id="actividades" className="actividades seccion-premium" data-aos="zoom-in">
