@@ -317,6 +317,62 @@ body {
   line-height: 1.5;
 }
 
+.bloque-exito-reserva {
+  display: grid;
+  gap: 10px;
+}
+
+.bloque-exito-reserva p {
+  margin: 0;
+  color: #2c4931;
+  font-weight: 650;
+}
+
+.estado-solicitud-v1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  color: #2c4931;
+}
+
+.estado-solicitud-v1 span {
+  border-radius: 999px;
+  background: #fff8e1;
+  border: 1px solid #ffe082;
+  color: #8a5d00;
+  padding: 4px 10px;
+  font-weight: 850;
+}
+
+.bloque-exito-reserva small {
+  color: #61705d;
+  font-weight: 700;
+}
+
+.valor-anticipo-v1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  border-radius: 12px;
+  background: #fffdf4;
+  border: 1px solid rgba(198, 161, 91, 0.34);
+  padding: 10px 12px;
+  color: #2c4931;
+}
+
+.valor-anticipo-v1 strong {
+  color: #1f4d2b;
+}
+
+.acciones-pago-v1 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+}
+
 .disponibilidad-ok {
   margin-top: 15px;
   background: #eef8f0;
@@ -545,6 +601,15 @@ button:hover {
   background: #f1eadc;
   border-color: rgba(31, 77, 43, 0.32);
   transform: translateY(-1px);
+}
+
+.reserva-form .btn-pagar-anticipo {
+  background: #c6a15b;
+  color: #1f2b1e;
+}
+
+.reserva-form .btn-pagar-anticipo:hover {
+  background: #b8924d;
 }
 
 .terminos {
@@ -1195,6 +1260,22 @@ button:hover {
 .stat-card.anticipos h3  { color: #6a1b9a; font-size: 1.4rem; }
 .stat-card.ingresos h3   { color: #00796b; font-size: 1.4rem; }
 
+.stat-card.solicitudes-nuevas {
+  border: 1px solid #ffe082;
+  background: linear-gradient(180deg, #fffdf4, #ffffff);
+}
+
+.stat-card.solicitudes-nuevas span {
+  display: inline-flex;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: #fff8e1;
+  color: #8a5d00;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .admin-reportes {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1322,6 +1403,29 @@ button:hover {
 .estado.confirmada { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
 .estado.cancelada  { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
 
+.reserva-pendiente-row td {
+  background: #fffdf4;
+}
+
+.cliente-admin {
+  display: block;
+  font-weight: 750;
+}
+
+.badge-nueva {
+  display: inline-flex;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: #fff3cd;
+  color: #8a5d00;
+  border: 1px solid #ffe082;
+  padding: 3px 9px;
+  font-size: 0.7rem;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
 /* --- Pago badges --- */
 .pago-ok {
   display: inline-block;
@@ -1347,6 +1451,32 @@ button:hover {
   white-space: nowrap;
 }
 
+.pago-admin-detalle {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  color: #425042;
+  font-size: 0.74rem;
+  line-height: 1.3;
+  white-space: normal;
+}
+
+.btn-link-pago {
+  width: fit-content;
+  border: 1px solid rgba(31, 77, 43, 0.18);
+  border-radius: 8px;
+  background: #f7faf7;
+  color: #1f4d2b;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.btn-link-pago:hover {
+  background: #eaf2ea;
+}
+
 /* --- Botones de acción --- */
 .acciones {
   display: flex;
@@ -1359,7 +1489,8 @@ button:hover {
 .btn-cancelar,
 .btn-editar,
 .btn-eliminar,
-.btn-pago {
+.btn-pago,
+.btn-copiar {
   border: none;
   padding: 5px 10px;
   border-radius: 7px;
@@ -1381,7 +1512,8 @@ button:hover {
 .btn-cancelar:hover,
 .btn-editar:hover,
 .btn-eliminar:hover,
-.btn-pago:hover {
+.btn-pago:hover,
+.btn-copiar:hover {
   opacity: 0.82;
   transform: translateY(-1px);
 }
@@ -1391,6 +1523,7 @@ button:hover {
 .btn-editar    { background: #f9a825; }
 .btn-eliminar  { background: #424242; }
 .btn-pago      { background: #1565c0; }
+.btn-copiar    { background: #6f8f72; }
 
 .btn-nueva-reserva {
   background: #2e7d32;
@@ -3577,5 +3710,510 @@ body {
 
   .logo-marca span {
     font-size: 1rem;
+  }
+
+  .acciones-pago-v1 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Admin entrega final: metricas ordenadas y gestion de fotos --- */
+.admin-metricas-bloques {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.admin-metricas-bloque {
+  background: #fbfcf8;
+  border: 1px solid #e4eadf;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 3px 16px rgba(33, 72, 38, 0.06);
+}
+
+.admin-metricas-bloque > h3 {
+  color: #1f4d2b;
+  font-size: 1rem;
+  margin: 0 0 14px;
+}
+
+.admin-metricas-bloque .admin-stats {
+  margin-bottom: 0;
+}
+
+.btn-fotos-admin {
+  width: auto;
+  margin-top: 0;
+  border-radius: 10px;
+  padding: 11px 16px;
+  font-size: 14px;
+  background: #7a5b16;
+}
+
+.admin-fotos {
+  background: #fffef8;
+  border: 1px solid #e6ece4;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 0 0 24px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+}
+
+.admin-fotos-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.admin-fotos-header h3 {
+  color: #1f4d2b;
+  margin: 0 0 6px;
+}
+
+.admin-fotos-header p,
+.admin-fotos-vacio {
+  color: #687568;
+  margin: 0;
+}
+
+.admin-fotos-alerta {
+  background: #fff7e6;
+  border: 1px solid #f0d9a0;
+  color: #7a4f00;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.admin-fotos-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(120px, 0.8fr) repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.admin-fotos-form input,
+.admin-fotos-form select {
+  width: 100%;
+  margin: 0;
+}
+
+.admin-foto-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #34513a;
+  font-weight: 700;
+}
+
+.admin-foto-check input {
+  width: auto;
+}
+
+.admin-fotos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.admin-foto-card {
+  display: grid;
+  grid-template-rows: 180px auto auto;
+  background: white;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
+}
+
+.admin-foto-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-foto-info {
+  padding: 14px;
+}
+
+.admin-foto-info strong,
+.admin-foto-info span,
+.admin-foto-info p {
+  display: block;
+}
+
+.admin-foto-info strong {
+  color: #1f4d2b;
+  margin-bottom: 4px;
+}
+
+.admin-foto-info span,
+.admin-foto-info p {
+  color: #687568;
+  font-size: 0.9rem;
+}
+
+.admin-foto-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-foto-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+
+.btn-preview-foto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  border-radius: 9px;
+  background: #f4f0e5;
+  color: #2f432f;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 980px) {
+  .admin-metricas-bloques {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-fotos-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-fotos-header,
+  .admin-fotos-form,
+  .admin-foto-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-fotos-header {
+    display: grid;
+  }
+
+  .btn-fotos-admin {
+    width: 100%;
+  }
+}
+
+/* --- Pulido final: confirmacion de reserva y fotos admin --- */
+.confirmacion-reserva-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid #dfe9dc;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbf5 100%);
+  color: #233426;
+  box-shadow: 0 18px 45px rgba(31, 77, 43, 0.12);
+}
+
+.confirmacion-reserva-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 5px;
+  background: linear-gradient(90deg, #1f6f43, #c4a755);
+}
+
+.confirmacion-reserva-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.confirmacion-kicker {
+  display: block;
+  color: #7a5b16;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.confirmacion-reserva-header h3 {
+  color: #1f4d2b;
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  margin: 0;
+}
+
+.confirmacion-reserva-card .estado-solicitud-v1 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  white-space: nowrap;
+  border: 1px solid #ead7a3;
+  border-radius: 999px;
+  background: #fff8e1;
+  color: #7a4f00;
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 7px 13px;
+}
+
+.confirmacion-mensaje {
+  margin: 0;
+  color: #425545;
+  font-size: 0.98rem;
+}
+
+.confirmacion-referencia {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  background: #edf5eb;
+  color: #48624a;
+  font-size: 0.78rem;
+  padding: 6px 10px;
+  word-break: break-word;
+}
+
+.confirmacion-reserva-card .valor-anticipo-v1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid #d9e7d6;
+  border-radius: 14px;
+  background: #f4faf2;
+  padding: 16px 18px;
+}
+
+.confirmacion-reserva-card .valor-anticipo-v1 span {
+  color: #506554;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.confirmacion-reserva-card .valor-anticipo-v1 strong {
+  color: #1f6f43;
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+}
+
+.confirmacion-notas {
+  display: grid;
+  gap: 8px;
+  border-left: 3px solid #c4a755;
+  background: #fffdf4;
+  border-radius: 0 12px 12px 0;
+  padding: 12px 14px;
+}
+
+.confirmacion-notas p,
+.confirmacion-reserva-card p {
+  margin: 0;
+}
+
+.confirmacion-reserva-card .acciones-pago-v1 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.confirmacion-reserva-card .btn-pagar-anticipo,
+.confirmacion-reserva-card .btn-consulta-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  border-radius: 12px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.confirmacion-reserva-card .btn-consulta-whatsapp {
+  border: 1px solid #1f6f43;
+  background: #ffffff;
+  color: #1f6f43;
+}
+
+.solicitud-enviada-pill {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1px solid #d9e7d6;
+  border-radius: 12px;
+  background: #f7fbf5;
+  color: #38563d;
+  font-size: 0.94rem;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 12px 16px;
+  text-align: center;
+}
+
+.terminos-check {
+  border-color: #dfe8d8;
+  background: #fffef8;
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(31, 77, 43, 0.06);
+}
+
+.terminos-check input {
+  accent-color: #1f6f43;
+}
+
+.admin-fotos {
+  border-color: #dfe8d8;
+  background: linear-gradient(180deg, #fffef8, #fbfcf8);
+}
+
+.admin-fotos-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e6ece4;
+}
+
+.admin-fotos-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.admin-fotos-alerta::before {
+  content: "!";
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f0c36a;
+  color: #5d3a00;
+  font-weight: 900;
+}
+
+.admin-fotos-form {
+  grid-template-columns: minmax(220px, 1.2fr) minmax(150px, 0.7fr) minmax(180px, 1fr) minmax(220px, 1.2fr) 100px;
+  align-items: stretch;
+  padding: 16px;
+  border: 1px solid #e8eee5;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.admin-foto-campo {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  color: #29452f;
+  font-weight: 800;
+}
+
+.admin-foto-campo span {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-foto-campo small {
+  color: #6d7b6e;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.admin-foto-campo input,
+.admin-foto-campo select {
+  min-height: 44px;
+  border: 1px solid #dfe8d8;
+  border-radius: 10px;
+  background: #fbfcf8;
+  padding: 10px 12px;
+}
+
+.admin-foto-descripcion {
+  grid-column: span 2;
+}
+
+.admin-foto-orden input {
+  text-align: center;
+}
+
+.admin-foto-opciones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-items: end;
+  grid-column: span 2;
+}
+
+.admin-foto-check {
+  min-height: 44px;
+  border: 1px solid #dfe8d8;
+  border-radius: 10px;
+  background: #fbfcf8;
+  padding: 10px 12px;
+}
+
+.admin-foto-submit {
+  align-self: end;
+  min-height: 44px;
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .admin-fotos-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-foto-descripcion,
+  .admin-foto-opciones {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .confirmacion-reserva-card {
+    padding: 20px;
+  }
+
+  .confirmacion-reserva-header,
+  .confirmacion-reserva-card .valor-anticipo-v1 {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .confirmacion-reserva-card .estado-solicitud-v1 {
+    width: fit-content;
+  }
+
+  .confirmacion-reserva-card .acciones-pago-v1,
+  .admin-fotos-form,
+  .admin-foto-opciones {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-foto-descripcion,
+  .admin-foto-opciones {
+    grid-column: auto;
   }
 }

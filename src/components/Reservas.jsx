@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from "date-fns/locale";
 import { supabase } from "../supabase";
+import { pagosConfig } from "../config/pagos";
 import {
   CABANAS,
   asignarPrimeraCabanaDisponible,
@@ -41,7 +42,7 @@ const renderCalendarHeader = ({
       disabled={prevMonthButtonDisabled}
       aria-label="Mes anterior"
     >
-      ‹
+      â€¹
     </button>
     <span className="calendario-header-titulo">{obtenerMesAnio(date)}</span>
     <button
@@ -51,7 +52,7 @@ const renderCalendarHeader = ({
       disabled={nextMonthButtonDisabled}
       aria-label="Mes siguiente"
     >
-      ›
+      â€º
     </button>
   </div>
 );
@@ -72,6 +73,8 @@ function Reservas() {
   const [cargando, setCargando] = useState(false);
   const [aceptaTerminos, setAceptaTerminos] = useState(false);
   const [mensajeExito, setMensajeExito] = useState("");
+  const [solicitudEnviada, setSolicitudEnviada] = useState(false);
+  const [reservaCreadaId, setReservaCreadaId] = useState("");
 
   useEffect(() => {
     const cargarReservas = async () => {
@@ -117,7 +120,7 @@ function Reservas() {
   const fechaIngresoTexto = ingreso ? ingreso.toLocaleDateString("es-CO") : "Pendiente";
   const fechaSalidaTexto = salida ? salida.toLocaleDateString("es-CO") : "Pendiente";
   const estadoDisponibilidad = !cabana
-    ? "Selecciona una cabaña"
+    ? "Selecciona una cabaÃ±a"
     : !ingreso
       ? "Selecciona fecha de ingreso"
       : !salida
@@ -126,17 +129,20 @@ function Reservas() {
           ? "Disponible"
           : "No disponible";
   const mensajeDisponibilidad = !cabana
-    ? "Primero selecciona una cabaña para ver sus fechas disponibles."
+    ? "Primero selecciona una cabaÃ±a para ver sus fechas disponibles."
     : !ingreso
       ? "Luego selecciona la fecha de ingreso."
       : !salida
         ? "Selecciona la fecha de salida para validar el rango."
         : rangoOk
-          ? "✅ Esta cabaña está disponible para las fechas seleccionadas."
-          : "⚠️ Esta cabaña no está disponible para una o más fechas seleccionadas.";
+          ? "âœ… Esta cabaÃ±a estÃ¡ disponible para las fechas seleccionadas."
+          : "âš ï¸ Esta cabaÃ±a no estÃ¡ disponible para una o mÃ¡s fechas seleccionadas.";
 
   const handleCabanaChange = (event) => {
     const nuevaCabana = event.target.value;
+    setSolicitudEnviada(false);
+    setReservaCreadaId("");
+    setMensajeExito("");
     setCabana(nuevaCabana);
     if (!nuevaCabana) {
       setIngreso(null);
@@ -145,6 +151,9 @@ function Reservas() {
   };
 
   const handleIngresoChange = (date) => {
+    setSolicitudEnviada(false);
+    setReservaCreadaId("");
+    setMensajeExito("");
     setIngreso(date);
     if (salida && date && salida <= date) setSalida(null);
   };
@@ -189,7 +198,7 @@ function Reservas() {
 
   const validarDisponibilidad = () => {
     if (!cabana) {
-      alert("Selecciona una cabaña antes de elegir fechas.");
+      alert("Selecciona una cabaÃ±a antes de elegir fechas.");
       return false;
     }
 
@@ -209,7 +218,7 @@ function Reservas() {
     }
 
     if (!rangoOk) {
-      alert("La cabaña seleccionada no está disponible en una o más fechas del rango.");
+      alert("La cabaÃ±a seleccionada no estÃ¡ disponible en una o mÃ¡s fechas del rango.");
       return false;
     }
 
@@ -218,7 +227,7 @@ function Reservas() {
 
   const validarTerminos = () => {
     if (!aceptaTerminos) {
-      alert("Debes aceptar los Términos y Condiciones para continuar con la reserva.");
+      alert("Debes aceptar los TÃ©rminos y Condiciones para continuar con la reserva.");
       return false;
     }
 
@@ -236,21 +245,96 @@ REFUGIO LA ARBOLEDA - COTIZACION ESPECIAL
 
 Nombre: ${nombre}
 Celular: ${celular}
-Cabaña: ${cabana}
+CabaÃ±a: ${cabana}
 Fecha ingreso: ${fmt(ingreso)}
 Fecha salida: ${fmt(salida)}
 Noches: ${tarifa.noches}
 Adultos: ${tarifa.adultos}
-Niños menores de 8 años: ${tarifa.ninosMenores}
+NiÃ±os menores de 8 aÃ±os: ${tarifa.ninosMenores}
 
-Solicito una cotización especial para una reserva de más de 3 noches.
-El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
+Solicito una cotizaciÃ³n especial para una reserva de mÃ¡s de 3 noches.
+El huÃ©sped acepta los TÃ©rminos y Condiciones de Refugio La Arboleda.
     `.trim();
 
     window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank");
   };
 
+  const notificarReservaPorCorreo = async ({ cabanaAsignada, fechaIngresoISO, fechaSalidaISO }) => {
+    const reservaParaCorreo = {
+      nombre,
+      correo,
+      celular,
+      cabana: cabanaAsignada,
+      fecha_ingreso: fechaIngresoISO,
+      fecha_salida: fechaSalidaISO,
+      adultos: tarifa.adultos,
+      ninos_menores: tarifa.ninosMenores,
+      personas: tarifa.personas,
+      tipo_reserva: tarifa.tipoReserva,
+      anticipo: tarifa.anticipo,
+      total: tarifa.total,
+      saldo_pendiente: tarifa.saldoPendiente,
+      estado: "Pendiente",
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      const { data, error } = await supabase.functions.invoke("enviar-correos-reserva", {
+        body: {
+          reservaId: null,
+          correoCliente: correo,
+          nombre,
+          cabana: cabanaAsignada,
+          fechaIngreso: fechaIngresoISO,
+          fechaSalida: fechaSalidaISO,
+          total: tarifa.total,
+          anticipo: tarifa.anticipo,
+          reserva: reservaParaCorreo,
+          reserva_lookup: {
+            correo,
+            celular,
+            cabana: cabanaAsignada,
+            fecha_ingreso: fechaIngresoISO,
+            fecha_salida: fechaSalidaISO,
+          },
+        },
+      });
+
+      if (error) {
+        console.error("No se pudo enviar el correo de reserva:", error);
+        return { ok: false, configured: false };
+      }
+
+      if (data?.errors?.length) {
+        console.error("Errores reportados por la funcion de correos:", data.errors);
+      }
+
+      return {
+        ok: Boolean(data?.ok),
+        configured: data?.configured !== false,
+        message: data?.message || "",
+      };
+    } catch (error) {
+      console.error("Error llamando la funcion de correos:", error);
+      return { ok: false, configured: false };
+    }
+  };
+
+  const pagarAnticipo = () => {
+    if (pagosConfig.boldActivo && pagosConfig.linkManualBold) {
+      window.open(pagosConfig.linkManualBold, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    alert(pagosConfig.mensajePagoNoDisponible);
+  };
+
   const enviarSolicitudReserva = async () => {
+    if (solicitudEnviada) {
+      alert("La solicitud ya fue enviada. Evitamos crear una reserva duplicada.");
+      return;
+    }
+
     if (!validarDatosContacto()) return;
     if (!validarDisponibilidad()) return;
     if (!validarTerminos()) return;
@@ -268,12 +352,13 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
     });
 
     if (!cabanaAsignada) {
-      alert("No hay cabañas disponibles para esas fechas. Prueba con otro rango.");
+      alert("No hay cabaÃ±as disponibles para esas fechas. Prueba con otro rango.");
       return;
     }
 
     setCargando(true);
     setMensajeExito("");
+    setReservaCreadaId("");
 
     try {
       const fechaIngresoISO = fechaToISO(ingreso);
@@ -307,6 +392,12 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
         return;
       }
 
+      const resultadoCorreo = await notificarReservaPorCorreo({
+        cabanaAsignada,
+        fechaIngresoISO,
+        fechaSalidaISO,
+      });
+
       setReservas((reservasActuales) => [
         ...reservasActuales,
         {
@@ -317,8 +408,12 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
           estado: "Pendiente",
         },
       ]);
+      setSolicitudEnviada(true);
+      setReservaCreadaId(`pendiente-${cabanaAsignada}-${fechaIngresoISO}-${fechaSalidaISO}`);
       setMensajeExito(
-        "Tu solicitud de reserva fue enviada correctamente. Pronto nos pondremos en contacto para confirmar disponibilidad y pago del anticipo.",
+        resultadoCorreo.ok
+          ? "Tu solicitud fue enviada correctamente. Tambien enviamos una copia al correo registrado."
+          : "Tu solicitud fue registrada correctamente. Nuestro equipo la revisara pronto.",
       );
     } catch (e) {
       console.error(e);
@@ -341,9 +436,9 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
         <input type="text" placeholder="Celular" value={celular} onChange={(e) => setCelular(e.target.value)} />
 
         <div className="cabana-box">
-          <label>Selecciona tu cabaña</label>
+          <label>Selecciona tu cabaÃ±a</label>
           <select className="cabana-select" value={cabana} onChange={handleCabanaChange}>
-            <option value="">Selecciona una cabaña</option>
+            <option value="">Selecciona una cabaÃ±a</option>
             {CABANAS.map((item) => (
               <option key={item} value={item} disabled={Boolean(ingreso && salida && !cabanasDisponibles.includes(item))}>
                 {item}
@@ -353,7 +448,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
         </div>
 
         <div className="calendario-ayuda">
-          Elige tu cabaña y selecciona tus fechas. Te mostraremos si está disponible.
+          Elige tu cabaÃ±a y selecciona tus fechas. Te mostraremos si estÃ¡ disponible.
         </div>
 
         <div className="fechas-grid">
@@ -363,7 +458,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
               selected={ingreso}
               onChange={handleIngresoChange}
               dateFormat="dd/MM/yyyy"
-              placeholderText={cabana ? "Ingreso" : "Selecciona una cabaña"}
+              placeholderText={cabana ? "Ingreso" : "Selecciona una cabaÃ±a"}
               minDate={new Date()}
               className="datepicker"
               filterDate={fechaDisponibleIngreso}
@@ -382,7 +477,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
               selected={salida}
               onChange={(d) => setSalida(d)}
               dateFormat="dd/MM/yyyy"
-              placeholderText={cabana ? "Salida" : "Selecciona una cabaña"}
+              placeholderText={cabana ? "Salida" : "Selecciona una cabaÃ±a"}
               minDate={ingreso ? new Date(ingreso.getTime() + 86400000) : new Date()}
               className="datepicker"
               filterDate={fechaDisponibleSalida}
@@ -404,7 +499,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
 
         <div className={`resumen-disponibilidad ${rangoDisponibleCompleto ? "disponible" : "no-disponible"}`}>
           <div className="linea-resumen">
-            <span>Cabaña seleccionada</span>
+            <span>CabaÃ±a seleccionada</span>
             <strong>{cabana || "Pendiente"}</strong>
           </div>
           <div className="linea-resumen">
@@ -424,7 +519,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
 
         {rangoValidado && !rangoOk && (
           <div className="mensaje-error">
-            La cabaña seleccionada no está disponible en una o más fechas del rango.
+            La cabaÃ±a seleccionada no estÃ¡ disponible en una o mÃ¡s fechas del rango.
           </div>
         )}
 
@@ -434,7 +529,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
             <input type="number" min="1" value={adultos} onChange={(e) => setAdultos(e.target.value)} />
           </label>
           <label>
-            Niños menores de 8 años
+            NiÃ±os menores de 8 aÃ±os
             <input type="number" min="0" value={ninosMenores} onChange={(e) => setNinosMenores(e.target.value)} />
           </label>
         </div>
@@ -445,11 +540,11 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
 
         <div className="precio-reserva">
           <h2>Resumen de Reserva</h2>
-          <div className="linea-resumen"><span>Cabaña seleccionada</span><span>{cabana || "Pendiente"}</span></div>
+          <div className="linea-resumen"><span>CabaÃ±a seleccionada</span><span>{cabana || "Pendiente"}</span></div>
           <div className="linea-resumen"><span>Fecha ingreso</span><span>{fechaIngresoTexto}</span></div>
           <div className="linea-resumen"><span>Fecha salida</span><span>{fechaSalidaTexto}</span></div>
           <div className="linea-resumen"><span>Adultos</span><span>{tarifa.adultos}</span></div>
-          <div className="linea-resumen"><span>Niños menores</span><span>{tarifa.ninosMenores}</span></div>
+          <div className="linea-resumen"><span>NiÃ±os menores</span><span>{tarifa.ninosMenores}</span></div>
           <hr />
           {tarifa.desglose.map((item) => (
             <div className="linea-resumen" key={item.label}>
@@ -477,11 +572,51 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
 
         {tarifa.reservaLarga && (
           <div className="mensaje-error">
-            Para reservas de más de 3 noches, comunícate directamente con el hotel por WhatsApp para recibir una tarifa especial.
+            Para reservas de mÃ¡s de 3 noches, comunÃ­cate directamente con el hotel por WhatsApp para recibir una tarifa especial.
           </div>
         )}
 
-        {mensajeExito && <div className="mensaje-exito">{mensajeExito}</div>}
+        {mensajeExito && (
+          <div className="mensaje-exito bloque-exito-reserva confirmacion-reserva-card">
+            <div className="confirmacion-reserva-header">
+              <div>
+                <span className="confirmacion-kicker">Solicitud recibida</span>
+                <h3>Reserva enviada correctamente</h3>
+              </div>
+              <span className="estado-solicitud-v1">Pendiente de confirmaciÃ³n</span>
+            </div>
+
+            <p className="confirmacion-mensaje">{mensajeExito}</p>
+
+            {reservaCreadaId && (
+              <small className="confirmacion-referencia">Referencia interna: {reservaCreadaId}</small>
+            )}
+
+            <div className="valor-anticipo-v1">
+              <span>Anticipo 40%</span>
+              <strong>${formatoMoneda(tarifa.anticipo)}</strong>
+            </div>
+
+            <div className="confirmacion-notas">
+              <p>Para confirmar la reserva se solicita el pago del anticipo.</p>
+              <p>El equipo de Refugio La Arboleda revisarÃ¡ la solicitud y confirmarÃ¡ el pago manualmente.</p>
+            </div>
+
+            <div className="acciones-pago-v1">
+              <button type="button" className="btn-pagar-anticipo" onClick={pagarAnticipo}>
+                Pagar anticipo
+              </button>
+              <a
+                className="btn-consulta-whatsapp"
+                href="https://wa.me/573136303649"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Hablar por WhatsApp
+              </a>
+            </div>
+          </div>
+        )}
 
         <label className="terminos-check">
           <input
@@ -490,8 +625,8 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
             onChange={(e) => setAceptaTerminos(e.target.checked)}
           />
           <span>
-            He leído y acepto los{" "}
-            <a href="#terminos">Términos y Condiciones de Refugio La Arboleda.</a>
+            He leÃ­do y acepto los{" "}
+            <a href="#terminos">TÃ©rminos y Condiciones de Refugio La Arboleda.</a>
           </span>
         </label>
 
@@ -499,20 +634,15 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
           <button type="button" onClick={consultarWhatsApp} disabled={cargando}>
             Consultar por WhatsApp
           </button>
+        ) : solicitudEnviada ? (
+          <div className="solicitud-enviada-pill" aria-live="polite">
+            Solicitud enviada. Puedes pagar el anticipo o contactarnos por WhatsApp desde la tarjeta anterior.
+          </div>
         ) : (
           <button type="button" onClick={enviarSolicitudReserva} disabled={cargando}>
             {cargando ? "Enviando..." : "Enviar solicitud de reserva"}
           </button>
         )}
-
-        <a
-          className="btn-consulta-whatsapp"
-          href="https://wa.me/573136303649"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Hablar por WhatsApp
-        </a>
 
         <p>Para confirmar la reserva se solicita un anticipo del 40%.</p>
       </form>
@@ -521,3 +651,4 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
 }
 
 export default Reservas;
+

@@ -1,5 +1,6 @@
 import { FaCheckCircle } from "react-icons/fa";
 import { imagenesRefugio } from "../data/imagenesRefugio";
+import { seleccionarFotosDinamicas } from "../lib/fotosSitio";
 
 const caracteristicas = [
   "Cabaña de 45 metros cuadrados",
@@ -15,7 +16,10 @@ const caracteristicas = [
   "Entorno natural",
 ];
 
-function Cabanas() {
+function Cabanas({ fotosDinamicas }) {
+  const fotosAdmin = seleccionarFotosDinamicas(fotosDinamicas, ["cabanas", "interior", "exterior"]);
+  const imagenesCabanas = fotosAdmin.length > 0 ? fotosAdmin : imagenesRefugio.cabanas;
+
   return (
     <section id="cabanas" className="cabanas seccion-premium" data-aos="zoom-in">
       <div className="seccion-encabezado">
@@ -29,7 +33,7 @@ function Cabanas() {
 
       <div className="cabanas-layout">
         <div className="cabanas-galeria">
-          {imagenesRefugio.cabanas.map((imagen) => (
+          {imagenesCabanas.map((imagen) => (
             <article className="cabana-imagen-card" key={imagen.src}>
               <img src={imagen.src} alt={imagen.alt} loading="lazy" decoding="async" />
               <h3>{imagen.titulo}</h3>

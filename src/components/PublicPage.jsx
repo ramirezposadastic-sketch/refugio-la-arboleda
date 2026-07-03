@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Experiencia from "./Experiencia";
-import Cabañas from "./Cabañas";
+import Cabanas from "./Cabañas";
 import Tarifas from "./Tarifas";
 import BeneficiosIncluidos from "./BeneficiosIncluidos";
 import Actividades from "./Actividades";
@@ -15,22 +15,32 @@ import Terminos from "./Terminos";
 import Contacto from "./Contacto";
 import Footer from "./Footer";
 import { FaWhatsapp } from "react-icons/fa";
+import { agruparFotosPorCategoria, cargarFotosActivasSitio } from "../lib/fotosSitio";
 
 function PublicPage() {
+  const [fotosDinamicas, setFotosDinamicas] = useState(null);
+
   useEffect(() => {
     AOS.init({ duration: 700, once: true });
+
+    cargarFotosActivasSitio()
+      .then((fotos) => setFotosDinamicas(agruparFotosPorCategoria(fotos)))
+      .catch((error) => {
+        console.warn("No se pudieron cargar fotos dinamicas, se usan imagenes locales:", error);
+        setFotosDinamicas(null);
+      });
   }, []);
 
   return (
     <>
       <Navbar />
-      <Hero />
+      <Hero fotosDinamicas={fotosDinamicas} />
       <Experiencia />
-      <Cabañas />
+      <Cabanas fotosDinamicas={fotosDinamicas} />
       <Tarifas />
       <BeneficiosIncluidos />
-      <Actividades />
-      <Galeria />
+      <Actividades fotosDinamicas={fotosDinamicas} />
+      <Galeria fotosDinamicas={fotosDinamicas} />
       <Ubicacion />
       <Reservas />
       <Terminos />
