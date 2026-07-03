@@ -1,50 +1,53 @@
+import {
+  FaLeaf,
+  FaHotTub,
+  FaMugHot,
+  FaWater,
+} from "react-icons/fa";
+
+const experiencias = [
+  {
+    icono: FaLeaf,
+    titulo: "Naturaleza cercana",
+    texto: "Un entorno verde para descansar, caminar y respirar con calma.",
+  },
+  {
+    icono: FaHotTub,
+    titulo: "Jacuzzi privado",
+    texto: "Un espacio íntimo con hidromasaje para relajarte al aire libre.",
+  },
+  {
+    icono: FaWater,
+    titulo: "Río y aventura",
+    texto: "Tubing y caminatas ecológicas para vivir el paisaje de forma activa.",
+  },
+  {
+    icono: FaMugHot,
+    titulo: "Momentos cálidos",
+    texto: "Fogata, chocolate caliente y detalles pensados para una estadía memorable.",
+  },
+];
+
 function Experiencia() {
   return (
-    <section
-  id="experiencia"
-  className="experiencia"
-  data-aos="zoom-in"
->
-      <h2>Una experiencia inolvidable en la naturaleza</h2>
+    <section id="experiencia" className="experiencia seccion-premium" data-aos="zoom-in">
+      <div className="seccion-encabezado">
+        <span className="section-kicker">Experiencia Refugio</span>
+        <h2>Una escapada natural con confort</h2>
+        <p>
+          Madera, río, aire puro y detalles de bienestar para desconectarte de la rutina sin
+          renunciar a la comodidad.
+        </p>
+      </div>
 
       <div className="experiencia-grid">
-
-        <div className="card">
-          <span>🌿</span>
-          <h3>Aromaterapia</h3>
-          <p>Relájate en un entorno natural diseñado para desconectarte del estrés..</p>
-        </div>
-
-        <div className="card">
-          <span>🍫</span>
-          <h3>Exfoliación con chocolate</h3>
-          <p>Una experiencia sensorial única que revitaliza cuerpo y mente..</p>
-        </div>
-
-        <div className="card">
-          <span>🥾</span>
-          <h3>Caminata ecológica</h3>
-          <p>Explora senderos rodeados de naturaleza y paisajes inolvidables.</p>
-        </div>
-
-        <div className="card">
-          <span>🛟</span>
-          <h3>Tubing por el río</h3>
-          <p>Vive una aventura refrescante mientras recorres las aguas del río.</p>
-        </div>
-
-        <div className="card">
-          <span>💦</span>
-          <h3>Piscinas naturales</h3>
-          <p>Disfruta espacios cristalinos ideales para descansar y relajarte.</p>
-        </div>
-
-        <div className="card">
-          <span>🔥</span>
-          <h3>Fogata con chocolate caliente</h3>
-          <p>Comparte momentos especiales bajo las estrellas junto a tus seres queridos.</p>
-        </div>
-
+        {experiencias.map(({ icono: Icono, titulo, texto }) => (
+          <article className="card experiencia-card" key={titulo}>
+            <Icono aria-hidden="true" />
+            <h3>{titulo}</h3>
+            <p>{texto}</p>
+          </article>
+        ))}
       </div>
     </section>
   );

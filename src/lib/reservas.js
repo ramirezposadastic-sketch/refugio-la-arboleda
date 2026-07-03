@@ -28,7 +28,7 @@ export function normalizarCabana(cabana = "") {
   return cabana
     .toString()
     .trim()
-    .replaceAll("CabaÃ±a", "Cabaña")
+    .replaceAll("Caba\u00c3\u00b1a", "Cabaña")
     .replaceAll("Cabana", "Cabaña");
 }
 

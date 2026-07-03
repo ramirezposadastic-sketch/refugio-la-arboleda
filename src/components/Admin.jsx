@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase";
 import {
   CABANAS,
@@ -10,11 +10,34 @@ import {
   normalizarEstado,
   rangoDisponible,
 } from "../lib/reservas";
+import { generarMensajeReservaWhatsApp } from "../lib/notificacionesReserva";
+import { formatearFechaHoraColombia, formatearFechaReserva } from "../utils/fechas";
 
 const FILTRO_TODAS = "Todas";
 const FILTRO_TODOS = "Todos";
 const FILTRO_MES_ACTUAL = "Mes actual";
+const ROL_ADMIN = "admin";
+const ROL_EMPLEADO = "empleado";
 const MENSAJE_SIN_PERMISOS = "No tienes permisos para realizar esta acción.";
+const BUCKET_FOTOS_SITIO = "imagenes-refugio";
+const CATEGORIAS_FOTOS_SITIO = [
+  "hero",
+  "cabanas",
+  "galeria",
+  "actividades",
+  "rio",
+  "zonas",
+  "exterior",
+  "interior",
+];
+const FOTO_FORM_INICIAL = {
+  titulo: "",
+  descripcion: "",
+  categoria: "galeria",
+  activa: true,
+  es_principal: false,
+  orden: 0,
+};
 
 function AdminLogin({ onLogin }) {
   const [correo, setCorreo] = useState("");
@@ -35,8 +58,8 @@ function AdminLogin({ onLogin }) {
     setCargando(false);
 
     if (error) {
-      console.error("Error de inicio de sesion:", error);
-      setErrorLogin(error.message || "No se pudo iniciar sesion. Revisa el correo y la contrasena.");
+      console.error("Error de inicio de sesión:", error);
+      setErrorLogin(error.message || "No se pudo iniciar sesión. Revisa el correo y la contraseña.");
       return;
     }
 
@@ -64,12 +87,12 @@ function AdminLogin({ onLogin }) {
         </label>
 
         <label>
-          Contrasena
+          Contraseña
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Tu contrasena"
+            placeholder="Tu contraseña"
             autoComplete="current-password"
             required
           />
@@ -78,7 +101,7 @@ function AdminLogin({ onLogin }) {
         {errorLogin && <div className="admin-login-error">{errorLogin}</div>}
 
         <button type="submit" disabled={cargando}>
-          {cargando ? "Iniciando..." : "Iniciar sesion"}
+          {cargando ? "Iniciando..." : "Iniciar sesión"}
         </button>
       </form>
     </section>
@@ -114,8 +137,11 @@ function personasReserva(reserva) {
 }
 
 function fechaLegible(fecha) {
-  if (!fecha) return "-";
-  return new Date(`${fecha.slice(0, 10)}T00:00:00`).toLocaleDateString("es-CO");
+  return formatearFechaReserva(fecha);
+}
+
+function fechaHoraLegible(fecha) {
+  return formatearFechaHoraColombia(fecha);
 }
 
 function ordenarReservas(reservas) {
@@ -192,44 +218,81 @@ function aplicarCalculoAutomatico(reserva) {
   };
 }
 
+function limpiarNombreArchivo(nombre) {
+  const extension = nombre.includes(".") ? nombre.split(".").pop() : "jpg";
+  const base = nombre
+    .replace(/\.[^/.]+$/, "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 70);
+
+  return (base || "foto") + "." + extension.toLowerCase();
+}
+
+function normalizarRol(rol) {
+  return rol === ROL_EMPLEADO ? ROL_EMPLEADO : ROL_ADMIN;
+}
+
+function esReservaEliminada(reserva) {
+  return normalizarEstado(reserva?.estado) === "eliminada";
+}
+
 function Admin() {
   const [session, setSession] = useState(null);
   const [verificandoSesion, setVerificandoSesion] = useState(true);
   const [verificandoPermisos, setVerificandoPermisos] = useState(false);
   const [adminAutorizado, setAdminAutorizado] = useState(null);
+  const [rolUsuario, setRolUsuario] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [filtroEstado, setFiltroEstado] = useState(FILTRO_TODAS);
   const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
   const [filtroPago, setFiltroPago] = useState(FILTRO_TODOS);
   const [filtroFecha, setFiltroFecha] = useState(FILTRO_TODOS);
   const [reservas, setReservas] = useState([]);
+  const [reservasEliminadas, setReservasEliminadas] = useState([]);
+  const [mostrarHistorialEliminadas, setMostrarHistorialEliminadas] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [reservaEditando, setReservaEditando] = useState(null);
   const [modoCrear, setModoCrear] = useState(false);
   const [valoresManuales, setValoresManuales] = useState(false);
   const [accionEnProceso, setAccionEnProceso] = useState(null);
+  const [mostrarGestionFotos, setMostrarGestionFotos] = useState(false);
+  const [fotosSitio, setFotosSitio] = useState([]);
+  const [fotoForm, setFotoForm] = useState(FOTO_FORM_INICIAL);
+  const [archivoFoto, setArchivoFoto] = useState(null);
+  const [cargandoFotos, setCargandoFotos] = useState(false);
+  const [errorFotos, setErrorFotos] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
-        console.error("Error verificando sesion:", error);
+        console.error("Error verificando sesión:", error);
       }
 
       setAdminAutorizado(null);
+      setRolUsuario(null);
       setVerificandoPermisos(Boolean(data.session));
       setReservas([]);
+      setReservasEliminadas([]);
+      setMostrarHistorialEliminadas(false);
       setSession(data.session || null);
       setVerificandoSesion(false);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nuevaSesion) => {
       setAdminAutorizado(null);
+      setRolUsuario(null);
       setVerificandoPermisos(Boolean(nuevaSesion));
       setSession(nuevaSesion || null);
       setMostrarModal(false);
       setReservaEditando(null);
       if (!nuevaSesion) {
         setReservas([]);
+        setReservasEliminadas([]);
+        setMostrarHistorialEliminadas(false);
       }
       setVerificandoSesion(false);
     });
@@ -244,44 +307,61 @@ function Admin() {
       return;
     }
 
-    supabase
-      .from("admin_users")
-      .select("id, user_id, email")
-      .eq("user_id", session.user.id)
-      .limit(1)
+    const buscarAdminUser = async (campo, valor, incluirRol = true) => {
+      let query = supabase
+        .from("admin_users")
+        .select(incluirRol ? "id, user_id, email, rol" : "id, user_id, email")
+        .limit(1);
+
+      query = campo === "email" ? query.ilike("email", valor) : query.eq(campo, valor);
+
+      const { data, error } = await query;
+
+      if (error && incluirRol && error.message?.toLowerCase().includes("rol")) {
+        return buscarAdminUser(campo, valor, false);
+      }
+
+      if (error) return { data: null, error };
+      return { data, error: null };
+    };
+
+    buscarAdminUser("user_id", session.user.id)
       .then(async ({ data, error }) => {
         if (error) {
           console.error("Error verificando permisos de admin por user_id:", error);
           setAdminAutorizado(false);
+          setRolUsuario(null);
           setReservas([]);
+          setReservasEliminadas([]);
           setVerificandoPermisos(false);
           return;
         }
 
         if (data?.length > 0) {
           setAdminAutorizado(true);
+          setRolUsuario(normalizarRol(data[0].rol));
           setVerificandoPermisos(false);
           return;
         }
 
-        const { data: emailData, error: emailError } = await supabase
-          .from("admin_users")
-          .select("id, user_id, email")
-          .eq("email", session.user.email)
-          .limit(1);
+        const { data: emailData, error: emailError } = await buscarAdminUser("email", session.user.email);
 
         if (emailError) {
           console.error("Error verificando permisos de admin por email:", emailError);
           setAdminAutorizado(false);
+          setRolUsuario(null);
           setReservas([]);
+          setReservasEliminadas([]);
           setVerificandoPermisos(false);
           return;
         }
 
         const autorizado = (emailData || []).length > 0;
         setAdminAutorizado(autorizado);
+        setRolUsuario(autorizado ? normalizarRol(emailData[0].rol) : null);
         if (!autorizado) {
           setReservas([]);
+          setReservasEliminadas([]);
         }
         setVerificandoPermisos(false);
       });
@@ -303,9 +383,29 @@ function Admin() {
           return;
         }
 
-        setReservas(ordenarReservas(data || []));
+        setReservas(ordenarReservas((data || []).filter((reserva) => !esReservaEliminada(reserva))));
       });
   }, [session, adminAutorizado]);
+
+  useEffect(() => {
+    if (!session || !adminAutorizado || rolUsuario !== ROL_ADMIN) {
+      return;
+    }
+
+    supabase
+      .from("reservas_eliminadas")
+      .select("*")
+      .order("eliminado_en", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("No se pudo cargar historial de eliminadas:", error);
+          setReservasEliminadas([]);
+          return;
+        }
+
+        setReservasEliminadas(data || []);
+      });
+  }, [session, adminAutorizado, rolUsuario]);
 
   const validarAdminAutorizado = () => {
     if (adminAutorizado !== true) {
@@ -315,6 +415,54 @@ function Admin() {
 
     return true;
   };
+
+  const esAdmin = rolUsuario === ROL_ADMIN;
+  const esEmpleado = rolUsuario === ROL_EMPLEADO;
+
+  const validarSoloAdmin = () => {
+    if (!validarAdminAutorizado()) return false;
+    if (!esAdmin) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return false;
+    }
+
+    return true;
+  };
+
+  const validarRolOperativo = () => {
+    if (!validarAdminAutorizado()) return false;
+    if (!esAdmin && !esEmpleado) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return false;
+    }
+
+    return true;
+  };
+
+  const cargarFotosSitio = useCallback(async () => {
+    if (!esAdmin) return;
+
+    setCargandoFotos(true);
+    setErrorFotos("");
+
+    const { data, error } = await supabase
+      .from("fotos_sitio")
+      .select("*")
+      .order("orden", { ascending: true })
+      .order("creado_en", { ascending: false });
+
+    setCargandoFotos(false);
+
+    if (error) {
+      console.error("No se pudieron cargar las fotos del sitio:", error);
+      setErrorFotos("No se pudieron cargar las fotos. Revisa que supabase/fotos-sitio.sql esté ejecutado y que tu usuario tenga rol admin.");
+      setFotosSitio([]);
+      return;
+    }
+
+    setFotosSitio(data || []);
+  }, [esAdmin]);
+
 
   const validarReserva = (reserva, cambios = {}) => {
     const reservaFinal = { ...reserva, ...cambios };
@@ -377,7 +525,7 @@ function Admin() {
   };
 
   const confirmarReserva = async (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), { estado: "Confirmada" });
     if (!reservaValidada) return;
@@ -403,7 +551,7 @@ function Admin() {
   };
 
   const confirmarPago = async (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), {
       estado: "Confirmada",
@@ -435,7 +583,7 @@ function Admin() {
   };
 
   const cancelarReserva = async (id) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     setAccionEnProceso(id);
 
@@ -458,16 +606,16 @@ function Admin() {
   };
 
   const editarReserva = (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
     setModoCrear(false);
-    setValoresManuales(true);
+    setValoresManuales(esAdmin);
     setReservaEditando(normalizarReservaParaEditar(reserva));
     setMostrarModal(true);
   };
 
   const nuevaReserva = () => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
     setModoCrear(true);
     setValoresManuales(false);
@@ -476,9 +624,21 @@ function Admin() {
   };
 
   const guardarEdicion = async () => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
-    const reservaValidada = validarReserva(reservaEditando);
+    const reservaOriginal = !modoCrear
+      ? reservas.find((item) => item.id === reservaEditando.id)
+      : null;
+
+    const reservaParaValidar = esAdmin
+      ? reservaEditando
+      : {
+          ...reservaEditando,
+          estado: reservaOriginal?.estado || "Pendiente",
+          pago_confirmado: Boolean(reservaOriginal?.pago_confirmado),
+        };
+
+    const reservaValidada = validarReserva(reservaParaValidar);
     if (!reservaValidada) return;
 
     const payload = {
@@ -495,9 +655,9 @@ function Admin() {
       anticipo: reservaValidada.anticipo,
       total: reservaValidada.total,
       saldo_pendiente: reservaValidada.saldo_pendiente,
-      estado: reservaValidada.estado || "Pendiente",
+      estado: esAdmin ? reservaValidada.estado || "Pendiente" : reservaOriginal?.estado || "Pendiente",
       observaciones: reservaValidada.observaciones || "",
-      pago_confirmado: reservaValidada.pago_confirmado,
+      pago_confirmado: esAdmin ? reservaValidada.pago_confirmado : Boolean(reservaOriginal?.pago_confirmado),
       fecha_ingreso: reservaValidada.fecha_ingreso,
       fecha_salida: reservaValidada.fecha_salida,
     };
@@ -530,7 +690,7 @@ function Admin() {
   };
 
   const eliminarReserva = async (reserva) => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarRolOperativo()) return;
 
     const id = reserva?.id;
 
@@ -540,34 +700,56 @@ function Admin() {
       return;
     }
 
-    if (!window.confirm("Deseas eliminar esta reserva?")) return;
+    const motivo = window.prompt("Motivo de eliminacion");
+
+    if (motivo === null) return;
+
+    const motivoLimpio = motivo.trim();
+
+    if (!motivoLimpio) {
+      alert("El motivo de eliminacion es obligatorio.");
+      return;
+    }
 
     setAccionEnProceso(id);
 
-    const { data, error } = await supabase
-      .from("reservas")
-      .delete()
-      .eq("id", id)
-      .select("id");
+    const { error } = await supabase.rpc("eliminar_reserva_con_motivo", {
+      p_reserva_id: id,
+      p_motivo: motivoLimpio,
+    });
 
     setAccionEnProceso(null);
 
     if (error) {
-      console.error("Error al eliminar reserva:", error);
-      alert(`No se pudo eliminar la reserva: ${error.message}`);
-      return;
-    }
-
-    if (!data || data.length === 0) {
-      console.error("Supabase no elimino ninguna reserva para el id:", id);
-      alert("No se elimino ninguna reserva. Revisa permisos de Supabase o que la reserva exista.");
+      console.error("Error al eliminar reserva con motivo:", error);
+      alert(`No se pudo eliminar la reserva. Verifica que ejecutaste supabase/roles-auditoria-admin.sql. Detalle: ${error.message}`);
       return;
     }
 
     setReservas((actuales) => actuales.filter((item) => item.id !== id));
+    if (esAdmin) {
+      setReservasEliminadas((actuales) => [
+        {
+          id: `local-${id}-${Date.now()}`,
+          reserva_id: id,
+          reserva_snapshot: reserva,
+          motivo: motivoLimpio,
+          eliminado_por: session?.user?.id || null,
+          eliminado_por_email: session?.user?.email || "",
+          eliminado_en: new Date().toISOString(),
+        },
+        ...actuales,
+      ]);
+    }
+    alert("Reserva eliminada y registrada en el historial.");
   };
 
   const actualizarCampoReserva = (campo, valor) => {
+    if (!esAdmin && ["estado", "pago_confirmado"].includes(campo)) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return;
+    }
+
     setReservaEditando((actual) => {
       const actualizada = { ...actual, [campo]: valor };
       if (valoresManuales) return actualizada;
@@ -581,6 +763,11 @@ function Admin() {
   };
 
   const actualizarImporte = (campo, valor) => {
+    if (!esAdmin) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return;
+    }
+
     const numero = Number(valor || 0);
     setValoresManuales(true);
     setReservaEditando((actual) => {
@@ -590,6 +777,114 @@ function Admin() {
       }
       return nuevo;
     });
+  };
+
+  const subirFotoSitio = async (event) => {
+    event.preventDefault();
+    if (!validarSoloAdmin()) return;
+
+    if (!archivoFoto) {
+      alert("Selecciona una imagen para subir.");
+      return;
+    }
+
+    if (!fotoForm.titulo.trim()) {
+      alert("Escribe un titulo para la foto.");
+      return;
+    }
+
+    setCargandoFotos(true);
+    setErrorFotos("");
+
+    const storagePath = fotoForm.categoria + "/" + Date.now() + "-" + limpiarNombreArchivo(archivoFoto.name);
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET_FOTOS_SITIO)
+      .upload(storagePath, archivoFoto, { cacheControl: "3600", upsert: false });
+
+    if (uploadError) {
+      console.error("No se pudo subir la foto:", uploadError);
+      const mensaje = uploadError.message?.toLowerCase().includes("bucket")
+        ? "Falta configurar el bucket imagenes-refugio en Supabase."
+        : uploadError.message || "No se pudo subir la foto.";
+      setErrorFotos(mensaje);
+      alert(mensaje);
+      setCargandoFotos(false);
+      return;
+    }
+
+    const { data: publicData } = supabase.storage.from(BUCKET_FOTOS_SITIO).getPublicUrl(storagePath);
+    const payload = {
+      ...fotoForm,
+      titulo: fotoForm.titulo.trim(),
+      descripcion: fotoForm.descripcion.trim(),
+      orden: Number(fotoForm.orden || 0),
+      url: publicData.publicUrl,
+      storage_path: storagePath,
+    };
+
+    const { data, error } = await supabase.from("fotos_sitio").insert([payload]).select("*").single();
+
+    setCargandoFotos(false);
+
+    if (error) {
+      console.error("No se pudo guardar la foto en fotos_sitio:", error);
+      setErrorFotos("La imagen subió, pero no se pudo guardar el registro. Revisa supabase/fotos-sitio.sql y permisos de admin.");
+      alert(error.message || "No se pudo guardar la foto.");
+      return;
+    }
+
+    setFotosSitio((actuales) => [data, ...actuales]);
+    setFotoForm(FOTO_FORM_INICIAL);
+    setArchivoFoto(null);
+    alert("Foto guardada correctamente.");
+  };
+
+  const actualizarFotoSitio = async (foto, cambios) => {
+    if (!validarSoloAdmin()) return;
+
+    setAccionEnProceso("foto-" + foto.id);
+    const { data, error } = await supabase.from("fotos_sitio").update(cambios).eq("id", foto.id).select("*").single();
+    setAccionEnProceso(null);
+
+    if (error) {
+      console.error("No se pudo actualizar la foto:", error);
+      alert(error.message || "No se pudo actualizar la foto.");
+      return;
+    }
+
+    setFotosSitio((actuales) => actuales.map((item) => (item.id === foto.id ? data : item)));
+  };
+
+  const eliminarFotoSitio = async (foto) => {
+    if (!validarSoloAdmin()) return;
+    if (!window.confirm("Deseas eliminar esta foto del sitio?")) return;
+
+    setAccionEnProceso("foto-" + foto.id);
+    const { error } = await supabase.from("fotos_sitio").delete().eq("id", foto.id);
+
+    if (error) {
+      console.error("No se pudo eliminar la foto:", error);
+      alert(error.message || "No se pudo eliminar la foto.");
+      setAccionEnProceso(null);
+      return;
+    }
+
+    if (foto.storage_path) {
+      await supabase.storage.from(BUCKET_FOTOS_SITIO).remove([foto.storage_path]);
+    }
+
+    setAccionEnProceso(null);
+    setFotosSitio((actuales) => actuales.filter((item) => item.id !== foto.id));
+  };
+
+  const copiarUrlFoto = async (url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      alert("URL copiada.");
+    } catch (error) {
+      console.error("No se pudo copiar la URL:", error);
+      alert(url);
+    }
   };
 
   const reservasFiltradas = useMemo(() => {
@@ -620,6 +915,14 @@ function Admin() {
           fechaIngreso.getFullYear() === anioActual);
 
       return coincideBusqueda && coincideEstado && coincideCabana && coincidePago && coincideFecha;
+    }).sort((a, b) => {
+      const pendienteA = normalizarEstado(a.estado) === "pendiente";
+      const pendienteB = normalizarEstado(b.estado) === "pendiente";
+      if (pendienteA !== pendienteB) return pendienteA ? -1 : 1;
+      const fechaA = a.fecha_ingreso || "";
+      const fechaB = b.fecha_ingreso || "";
+      if (fechaA !== fechaB) return fechaA.localeCompare(fechaB);
+      return String(a.id || "").localeCompare(String(b.id || ""));
     });
   }, [reservas, busqueda, filtroEstado, filtroCabana, filtroPago, filtroFecha]);
 
@@ -654,7 +957,7 @@ function Admin() {
   }, [reservas]);
 
   const exportarCsv = () => {
-    if (!validarAdminAutorizado()) return;
+    if (!validarSoloAdmin()) return;
 
     const columnas = [
       "nombre",
@@ -703,6 +1006,53 @@ function Admin() {
     URL.revokeObjectURL(url);
   };
 
+  const copiarResumenReserva = async (reserva) => {
+    if (!validarAdminAutorizado()) return;
+
+    const resumen = generarMensajeReservaWhatsApp({
+      ...reserva,
+      total: valorTotal(reserva),
+      anticipo: valorAnticipo(reserva),
+      saldo_pendiente: valorSaldo(reserva),
+      adultos: adultosReserva(reserva),
+      ninos_menores: ninosReserva(reserva),
+    });
+
+    try {
+      await navigator.clipboard.writeText(resumen);
+      alert("Resumen de la reserva copiado.");
+    } catch (error) {
+      console.error("No se pudo copiar al portapapeles:", error);
+      alert("No se pudo copiar el resumen. Revisa permisos del navegador.");
+    }
+  };
+
+  const copiarLinkPago = async (reserva) => {
+    if (!validarAdminAutorizado()) return;
+
+    if (!reserva?.pago_url) {
+      alert("Esta reserva todavía no tiene link de pago.");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(reserva.pago_url);
+      alert("Link de pago copiado.");
+    } catch (error) {
+      console.error("No se pudo copiar el link de pago:", error);
+      alert("No se pudo copiar el link de pago. Revisa permisos del navegador.");
+    }
+  };
+
+  const tieneDatosPago = (reserva) =>
+    Boolean(
+      reserva?.pago_proveedor ||
+      reserva?.pago_estado ||
+      reserva?.pago_referencia ||
+      reserva?.pago_url ||
+      reserva?.pago_monto,
+    );
+
   const pendientes = reservas.filter((r) => normalizarEstado(r.estado) === "pendiente").length;
   const confirmadas = reservas.filter((r) => normalizarEstado(r.estado) === "confirmada").length;
   const canceladas = reservas.filter((r) => normalizarEstado(r.estado) === "cancelada").length;
@@ -714,16 +1064,21 @@ function Admin() {
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      console.error("Error al cerrar sesion:", error);
-      alert(error.message || "No se pudo cerrar sesion.");
+      console.error("Error al cerrar sesión:", error);
+      alert(error.message || "No se pudo cerrar sesión.");
       return;
     }
 
     setAdminAutorizado(null);
+    setRolUsuario(null);
     setVerificandoPermisos(false);
     setAccionEnProceso(null);
+    setMostrarGestionFotos(false);
+    setFotosSitio([]);
     setSession(null);
     setReservas([]);
+    setReservasEliminadas([]);
+    setMostrarHistorialEliminadas(false);
   };
 
   if (verificandoSesion) {
@@ -766,7 +1121,7 @@ function Admin() {
             No tienes permisos para acceder al panel administrativo.
           </div>
           <button type="button" onClick={cerrarSesion}>
-            Cerrar sesion
+            Cerrar sesión
           </button>
         </div>
       </section>
@@ -778,23 +1133,56 @@ function Admin() {
       <div className="admin-header">
         <div>
           <h2>Panel de Reservas</h2>
-          <p>Gestion de disponibilidad, pagos y reportes.</p>
+          <p>Gestión de disponibilidad, pagos y reportes. Rol: {rolUsuario || "sin rol"}</p>
         </div>
         <div className="admin-header-actions">
-          <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>
-          <button className="btn-salir" onClick={cerrarSesion}>Cerrar sesion</button>
+          {esAdmin && <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>}
+          {esAdmin && (
+            <button
+              className="btn-fotos-admin"
+              type="button"
+              onClick={() => {
+                const abrirFotos = !mostrarGestionFotos;
+                setMostrarGestionFotos(abrirFotos);
+                if (abrirFotos) cargarFotosSitio();
+              }}
+            >
+              {mostrarGestionFotos ? "Ocultar fotos" : "Gestión de fotos"}
+            </button>
+          )}
+          {esAdmin && (
+            <button
+              className="btn-historial"
+              type="button"
+              onClick={() => setMostrarHistorialEliminadas((valor) => !valor)}
+            >
+              {mostrarHistorialEliminadas ? "Ocultar eliminadas" : "Ver eliminadas"}
+            </button>
+          )}
+          <button className="btn-salir" onClick={cerrarSesion}>Cerrar sesión</button>
         </div>
       </div>
 
-      <div className="admin-stats admin-stats-profesional">
-        <div className="stat-card"><h3>{reservas.length}</h3><p>Total de reservas</p></div>
-        <div className="stat-card pendiente"><h3>{pendientes}</h3><p>Pendientes</p></div>
-        <div className="stat-card confirmada"><h3>{confirmadas}</h3><p>Confirmadas</p></div>
-        <div className="stat-card cancelada"><h3>{canceladas}</h3><p>Canceladas</p></div>
-        <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
-        <div className="stat-card anticipos"><h3>${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
-        <div className="stat-card saldos"><h3>${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
-        <div className="stat-card ingresos"><h3>${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
+      <div className="admin-metricas-bloques">
+        <section className="admin-metricas-bloque">
+          <h3>Estado de reservas</h3>
+          <div className="admin-stats admin-stats-profesional">
+            <div className="stat-card"><h3>{reservas.length}</h3><p>Total de reservas</p></div>
+            <div className="stat-card pendiente solicitudes-nuevas"><h3>{pendientes}</h3><p>Solicitudes nuevas</p><span>Revisar primero</span></div>
+            <div className="stat-card confirmada"><h3>{confirmadas}</h3><p>Confirmadas</p></div>
+            <div className="stat-card cancelada"><h3>{canceladas}</h3><p>Canceladas</p></div>
+          </div>
+        </section>
+
+        <section className="admin-metricas-bloque">
+          <h3>Resumen financiero</h3>
+          <div className="admin-stats admin-stats-profesional">
+            <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
+            <div className="stat-card anticipos"><h3>${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
+            <div className="stat-card saldos"><h3>${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
+            <div className="stat-card ingresos"><h3>${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
+          </div>
+        </section>
       </div>
 
       <div className="admin-reportes">
@@ -811,6 +1199,183 @@ function Admin() {
           ))}
         </div>
       </div>
+
+      {esAdmin && mostrarGestionFotos && (
+        <section className="admin-fotos">
+          <div className="admin-fotos-header">
+            <div>
+              <h3>Gestión de fotos</h3>
+              <p>Sube fotos al bucket imagenes-refugio y elige dónde aparecen en la página pública.</p>
+            </div>
+            <button type="button" className="btn-historial" onClick={cargarFotosSitio} disabled={cargandoFotos}>
+              {cargandoFotos ? "Cargando..." : "Actualizar lista"}
+            </button>
+          </div>
+
+          {errorFotos && <div className="admin-fotos-alerta">{errorFotos}</div>}
+
+          <form className="admin-fotos-form" onSubmit={subirFotoSitio}>
+            <label className="admin-foto-campo admin-foto-archivo">
+              <span>Imagen</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(event) => setArchivoFoto(event.target.files?.[0] || null)}
+              />
+              <small>{archivoFoto ? archivoFoto.name : "Selecciona una foto horizontal y nítida."}</small>
+            </label>
+
+            <label className="admin-foto-campo">
+              <span>Sección</span>
+              <select
+                value={fotoForm.categoria}
+                onChange={(event) => setFotoForm((actual) => ({ ...actual, categoria: event.target.value }))}
+              >
+                {CATEGORIAS_FOTOS_SITIO.map((categoria) => (
+                  <option key={categoria} value={categoria}>{categoria}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="admin-foto-campo">
+              <span>Título</span>
+              <input
+                type="text"
+                placeholder="Ej. Cabaña principal"
+                value={fotoForm.titulo}
+                onChange={(event) => setFotoForm((actual) => ({ ...actual, titulo: event.target.value }))}
+              />
+            </label>
+
+            <label className="admin-foto-campo admin-foto-descripcion">
+              <span>Descripción corta</span>
+              <input
+                type="text"
+                placeholder="Texto opcional para identificar la foto"
+                value={fotoForm.descripcion}
+                onChange={(event) => setFotoForm((actual) => ({ ...actual, descripcion: event.target.value }))}
+              />
+            </label>
+
+            <label className="admin-foto-campo admin-foto-orden">
+              <span>Orden</span>
+              <input
+                type="number"
+                placeholder="0"
+                value={fotoForm.orden}
+                onChange={(event) => setFotoForm((actual) => ({ ...actual, orden: event.target.value }))}
+              />
+            </label>
+
+            <div className="admin-foto-opciones">
+              <label className="admin-foto-check">
+                <input
+                  type="checkbox"
+                  checked={fotoForm.activa}
+                  onChange={(event) => setFotoForm((actual) => ({ ...actual, activa: event.target.checked }))}
+                />
+                Activa
+              </label>
+              <label className="admin-foto-check">
+                <input
+                  type="checkbox"
+                  checked={fotoForm.es_principal}
+                  onChange={(event) => setFotoForm((actual) => ({ ...actual, es_principal: event.target.checked }))}
+                />
+                Principal
+              </label>
+            </div>
+
+            <button type="submit" className="btn-confirmar admin-foto-submit" disabled={cargandoFotos}>
+              {cargandoFotos ? "Subiendo..." : "Subir foto"}
+            </button>
+          </form>
+
+          <div className="admin-fotos-grid">
+            {fotosSitio.map((foto) => (
+              <article className="admin-foto-card" key={foto.id}>
+                <img src={foto.url} alt={foto.descripcion || foto.titulo} loading="lazy" />
+                <div className="admin-foto-info">
+                  <strong>{foto.titulo}</strong>
+                  <span>{foto.categoria} · orden {foto.orden}</span>
+                  {foto.descripcion && <p>{foto.descripcion}</p>}
+                  <div className="admin-foto-badges">
+                    <span className={foto.activa ? "pago-ok" : "pago-pendiente"}>{foto.activa ? "Activa" : "Inactiva"}</span>
+                    {foto.es_principal && <span className="badge-nueva">Principal</span>}
+                  </div>
+                </div>
+                <div className="admin-foto-actions">
+                  <button
+                    type="button"
+                    className="btn-editar"
+                    disabled={accionEnProceso === "foto-" + foto.id}
+                    onClick={() => actualizarFotoSitio(foto, { activa: !foto.activa })}
+                  >
+                    {foto.activa ? "Desactivar" : "Activar"}
+                  </button>
+                  <button type="button" className="btn-copiar" onClick={() => copiarUrlFoto(foto.url)}>Copiar URL</button>
+                  <a href={foto.url} target="_blank" rel="noopener noreferrer" className="btn-preview-foto">Vista previa</a>
+                  <button
+                    type="button"
+                    className="btn-eliminar"
+                    disabled={accionEnProceso === "foto-" + foto.id}
+                    onClick={() => eliminarFotoSitio(foto)}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </article>
+            ))}
+            {fotosSitio.length === 0 && !cargandoFotos && (
+              <p className="admin-fotos-vacio">No hay fotos dinámicas cargadas. La página pública seguirá usando las imágenes locales.</p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {esAdmin && mostrarHistorialEliminadas && (
+        <div className="admin-historial-eliminadas">
+          <h3>Historial de reservas eliminadas</h3>
+          <div className="admin-tabla-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Cabaña</th>
+                  <th>Ingreso</th>
+                  <th>Salida</th>
+                  <th>Total</th>
+                  <th>Eliminado por</th>
+                  <th>Fecha</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reservasEliminadas.map((item) => {
+                  const snapshot = item.reserva_snapshot || {};
+                  return (
+                    <tr key={item.id}>
+                      <td>{snapshot.nombre || "-"}</td>
+                      <td>{normalizarCabana(snapshot.cabana) || "-"}</td>
+                      <td>{fechaLegible(snapshot.fecha_ingreso)}</td>
+                      <td>{fechaLegible(snapshot.fecha_salida)}</td>
+                      <td>${formatoMoneda(valorTotal(snapshot))}</td>
+                      <td>{item.eliminado_por_email || "-"}</td>
+                      <td>{fechaHoraLegible(item.eliminado_en)}</td>
+                      <td>{item.motivo}</td>
+                    </tr>
+                  );
+                })}
+                {reservasEliminadas.length === 0 && (
+                  <tr>
+                    <td colSpan="8">No hay reservas eliminadas registradas.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="admin-toolbar">
         <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
@@ -862,9 +1427,14 @@ function Admin() {
             </tr>
           </thead>
           <tbody>
-            {reservasFiltradas.map((r) => (
-              <tr key={r.id}>
-                <td>{r.nombre}</td>
+            {reservasFiltradas.map((r) => {
+              const esPendiente = normalizarEstado(r.estado) === "pendiente";
+              return (
+              <tr key={r.id} className={esPendiente ? "reserva-pendiente-row" : ""}>
+                <td>
+                  <span className="cliente-admin">{r.nombre}</span>
+                  {esPendiente && <span className="badge-nueva">Nueva</span>}
+                </td>
                 <td>{r.celular}</td>
                 <td>{normalizarCabana(r.cabana)}</td>
                 <td>{fechaLegible(r.fecha_ingreso)}</td>
@@ -881,20 +1451,35 @@ function Admin() {
                   <span className={r.pago_confirmado ? "pago-ok" : "pago-pendiente"}>
                     {r.pago_confirmado ? "Confirmado" : "Pendiente"}
                   </span>
+                  {tieneDatosPago(r) && (
+                    <div className="pago-admin-detalle">
+                      <span>Proveedor: {r.pago_proveedor || "Bold"}</span>
+                      <span>Estado: {r.pago_estado || "pendiente"}</span>
+                      {r.pago_referencia && <span>Ref: {r.pago_referencia}</span>}
+                      <span>Monto: ${formatoMoneda(Number(r.pago_monto || valorAnticipo(r)))}</span>
+                      {r.pago_url && (
+                        <button type="button" className="btn-link-pago" onClick={() => copiarLinkPago(r)}>
+                          Copiar link de pago
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </td>
                 <td>
                   <div className="acciones acciones-admin">
-                    <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>
-                    <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>
-                    <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>
+                    {esAdmin && <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>}
+                    {esAdmin && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
+                    {esAdmin && <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>}
                     <button className="btn-editar" onClick={() => editarReserva(r)} disabled={accionEnProceso === r.id}>Editar</button>
+                    <button className="btn-copiar" onClick={() => copiarResumenReserva(r)} disabled={accionEnProceso === r.id}>Copiar resumen</button>
                     <button className="btn-eliminar" onClick={() => eliminarReserva(r)} disabled={accionEnProceso === r.id}>
                       {accionEnProceso === r.id ? "Procesando..." : "Eliminar"}
                     </button>
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -909,9 +1494,9 @@ function Admin() {
               <div className="modal-grid">
                 <input type="text" placeholder="Nombre" value={reservaEditando.nombre || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, nombre: e.target.value })} />
                 <input type="text" placeholder="Celular" value={reservaEditando.celular || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, celular: e.target.value })} />
-                <input type="text" placeholder="Identificacion" value={reservaEditando.identificacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, identificacion: e.target.value })} />
+                <input type="text" placeholder="Identificación" value={reservaEditando.identificacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, identificacion: e.target.value })} />
                 <input type="email" placeholder="Correo" value={reservaEditando.correo || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, correo: e.target.value })} />
-                <input type="text" placeholder="Ocupacion" value={reservaEditando.ocupacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, ocupacion: e.target.value })} />
+                <input type="text" placeholder="Ocupación" value={reservaEditando.ocupacion || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, ocupacion: e.target.value })} />
                 <input type="text" placeholder="Residencia" value={reservaEditando.residencia || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, residencia: e.target.value })} />
               </div>
             </div>
@@ -922,7 +1507,7 @@ function Admin() {
                 <select value={normalizarCabana(reservaEditando.cabana) || CABANAS[0]} onChange={(e) => actualizarCampoReserva("cabana", e.target.value)}>
                   {CABANAS.map((item) => <option key={item}>{item}</option>)}
                 </select>
-                <select value={reservaEditando.estado || "Pendiente"} onChange={(e) => setReservaEditando({ ...reservaEditando, estado: e.target.value })}>
+                <select value={reservaEditando.estado || "Pendiente"} onChange={(e) => actualizarCampoReserva("estado", e.target.value)} disabled={!esAdmin}>
                   <option>Pendiente</option>
                   <option>Confirmada</option>
                   <option>Cancelada</option>
@@ -937,21 +1522,23 @@ function Admin() {
             <div className="modal-seccion">
               <h3>Valores</h3>
               <div className="modal-grid">
-                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} /></label>
-                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} /></label>
-                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} /></label>
+                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} disabled={!esAdmin} /></label>
+                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!esAdmin} /></label>
+                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!esAdmin} /></label>
               </div>
               <p className="nota-valores">
                 {valoresManuales
                   ? "Valores manuales activos."
-                  : "Los valores se recalculan automaticamente con fechas y huespedes."}
+                  : esAdmin
+                    ? "Los valores se recalculan automaticamente con fechas y huespedes."
+                    : "Empleado: los valores se recalculan automaticamente y no se pueden editar manualmente."}
               </p>
             </div>
 
             <textarea placeholder="Observaciones" value={reservaEditando.observaciones || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, observaciones: e.target.value })} />
 
             <label className="check-pago">
-              <input type="checkbox" checked={reservaEditando.pago_confirmado || false} onChange={(e) => setReservaEditando({ ...reservaEditando, pago_confirmado: e.target.checked })} />
+              <input type="checkbox" checked={reservaEditando.pago_confirmado || false} onChange={(e) => actualizarCampoReserva("pago_confirmado", e.target.checked)} disabled={!esAdmin} />
               Pago confirmado
             </label>
 
@@ -969,3 +1556,4 @@ function Admin() {
 }
 
 export default Admin;
+
