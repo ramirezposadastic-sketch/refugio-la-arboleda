@@ -40,4 +40,4 @@ https://refugiolaarboleda.com
 
 Desarrollado por Brayan Stic Ramirez Posada.
 
-GitHub: https://github.com/ramirezposadastic
+GitHub: [https://github.com/ramirezposadastic](https://github.com/ramirezposadastic-sketch)
