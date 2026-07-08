@@ -8,7 +8,7 @@ const PORCENTAJE_ANTICIPO = 0.4;
 export const TARIFAS = {
   semana: {
     personaSola: 300000,
-    pareja: 420000,
+    pareja: 440000,
     adultoAdicional: 180000,
     nino: 130000,
   },

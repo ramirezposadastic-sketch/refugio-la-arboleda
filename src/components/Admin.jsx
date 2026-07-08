@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "../supabase";
 import {
   CABANAS,
@@ -1044,13 +1044,36 @@ function Admin() {
     }
   };
 
+  const claseEstadoPagoWompi = (estado) => {
+    const estadoNormalizado = normalizarEstado(estado);
+    if (["aprobado", "approved", "pagado"].includes(estadoNormalizado)) return "pago-ok";
+    if (["rechazado", "declined", "error", "voided"].includes(estadoNormalizado)) return "pago-error";
+    return "pago-pendiente";
+  };
+
+  const etiquetaEstadoPagoWompi = (estado) => {
+    const estadoNormalizado = normalizarEstado(estado || "pendiente");
+    if (estadoNormalizado === "link_generado") return "Link generado";
+    if (estadoNormalizado === "aprobado" || estadoNormalizado === "approved") return "Pago aprobado por Wompi";
+    if (estadoNormalizado === "rechazado" || estadoNormalizado === "declined") return "Rechazado";
+    if (estadoNormalizado === "error") return "Error";
+    return estado || "Pendiente";
+  };
+
   const tieneDatosPago = (reserva) =>
     Boolean(
       reserva?.pago_proveedor ||
       reserva?.pago_estado ||
       reserva?.pago_referencia ||
       reserva?.pago_url ||
-      reserva?.pago_monto,
+      reserva?.pago_monto ||
+      reserva?.pago_transaccion_id ||
+      reserva?.pago_transaction_id ||
+      reserva?.pago_metodo ||
+      reserva?.pago_confirmado_en ||
+      reserva?.pago_evento_raw ||
+      reserva?.pago_raw ||
+      reserva?.pago_error,
     );
 
   const pendientes = reservas.filter((r) => normalizarEstado(r.estado) === "pendiente").length;
@@ -1452,14 +1475,20 @@ function Admin() {
                     {r.pago_confirmado ? "Confirmado" : "Pendiente"}
                   </span>
                   {tieneDatosPago(r) && (
-                    <div className="pago-admin-detalle">
-                      <span>Proveedor: {r.pago_proveedor || "Bold"}</span>
-                      <span>Estado: {r.pago_estado || "pendiente"}</span>
-                      {r.pago_referencia && <span>Ref: {r.pago_referencia}</span>}
+                    <div className="pago-admin-detalle pago-wompi-detalle">
+                      <span>Proveedor: {r.pago_proveedor || "Wompi"}</span>
+                      <span className={claseEstadoPagoWompi(r.pago_estado)}>
+                        Estado Wompi: {etiquetaEstadoPagoWompi(r.pago_estado)}
+                      </span>
+                      {r.pago_referencia && <span>Referencia: {r.pago_referencia}</span>}
+                      {(r.pago_transaccion_id || r.pago_transaction_id) && <span>Transacción: {r.pago_transaccion_id || r.pago_transaction_id}</span>}
+                      {r.pago_metodo && <span>Método: {r.pago_metodo}</span>}
                       <span>Monto: ${formatoMoneda(Number(r.pago_monto || valorAnticipo(r)))}</span>
+                      {r.pago_confirmado_en && <span>Fecha de pago: {fechaHoraLegible(r.pago_confirmado_en)}</span>}
+                      {r.pago_error && <span className="pago-error">Error: {r.pago_error}</span>}
                       {r.pago_url && (
                         <button type="button" className="btn-link-pago" onClick={() => copiarLinkPago(r)}>
-                          Copiar link de pago
+                          Copiar checkout
                         </button>
                       )}
                     </div>

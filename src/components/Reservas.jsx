@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { es } from "date-fns/locale";
@@ -76,6 +76,9 @@ function Reservas() {
   const [mensajeExito, setMensajeExito] = useState("");
   const [solicitudEnviada, setSolicitudEnviada] = useState(false);
   const [reservaCreadaId, setReservaCreadaId] = useState("");
+  const [reservaCreada, setReservaCreada] = useState(null);
+  const [preparandoPago, setPreparandoPago] = useState(false);
+  const [mensajePago, setMensajePago] = useState("");
 
   useEffect(() => {
     const cargarReservas = async () => {
@@ -143,6 +146,8 @@ function Reservas() {
     const nuevaCabana = event.target.value;
     setSolicitudEnviada(false);
     setReservaCreadaId("");
+    setReservaCreada(null);
+    setMensajePago("");
     setMensajeExito("");
     setCabana(nuevaCabana);
     if (!nuevaCabana) {
@@ -154,6 +159,8 @@ function Reservas() {
   const handleIngresoChange = (date) => {
     setSolicitudEnviada(false);
     setReservaCreadaId("");
+    setReservaCreada(null);
+    setMensajePago("");
     setMensajeExito("");
     setIngreso(date);
     if (salida && date && salida <= date) setSalida(null);
@@ -321,13 +328,68 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
     }
   };
 
-  const pagarAnticipo = () => {
-    if (pagosConfig.boldActivo && pagosConfig.linkManualBold) {
-      window.open(pagosConfig.linkManualBold, "_blank", "noopener,noreferrer");
+  const abrirWhatsAppPago = () => {
+    const mensaje = `Hola, quiero ayuda para pagar el anticipo de mi reserva en Refugio La Arboleda.\nReferencia: ${reservaCreadaId || "pendiente"}`;
+    window.open(`https://wa.me/573136303649?text=${encodeURIComponent(mensaje)}`, "_blank", "noopener,noreferrer");
+  };
+
+  const abrirCheckoutWompi = (checkout) => {
+    if (checkout?.checkoutUrl) {
+      window.location.href = checkout.checkoutUrl;
       return;
     }
 
-    alert(pagosConfig.mensajePagoNoDisponible);
+    const publicKey = checkout?.publicKey;
+    const amountInCents = checkout?.amountInCents || checkout?.amount_in_cents;
+    const currency = checkout?.currency || "COP";
+    const reference = checkout?.reference;
+    const integrity = checkout?.integrity;
+    const redirectUrl = checkout?.redirectUrl || checkout?.redirect_url;
+
+    if (!publicKey || !amountInCents || !reference || !integrity || !redirectUrl) {
+      throw new Error("Respuesta de Wompi incompleta.");
+    }
+
+    const params = new URLSearchParams();
+    params.set("public-key", publicKey);
+    params.set("currency", currency);
+    params.set("amount-in-cents", amountInCents);
+    params.set("reference", reference);
+    params.set("redirect-url", redirectUrl);
+    params.set("signature:integrity", integrity);
+    window.location.href = `https://checkout.wompi.co/p/?${params.toString()}`;
+  };
+
+  const pagarAnticipo = async () => {
+    if (!reservaCreada) {
+      alert("Primero debes enviar la solicitud de reserva.");
+      return;
+    }
+
+    setPreparandoPago(true);
+    setMensajePago("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("crear-pago-wompi", {
+        body: {
+          reserva_id: reservaCreada.id || null,
+          reserva_lookup: reservaCreada.lookup,
+        },
+      });
+
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || "No se pudo preparar el pago.");
+      }
+
+      abrirCheckoutWompi(data.checkout);
+    } catch (error) {
+      console.error("No se pudo preparar el pago con Wompi:", error);
+      setMensajePago(pagosConfig.mensajePagoNoDisponible);
+      alert(`${pagosConfig.mensajePagoNoDisponible}\n\nTe abriremos WhatsApp como alternativa.`);
+      abrirWhatsAppPago();
+    } finally {
+      setPreparandoPago(false);
+    }
   };
 
   const enviarSolicitudReserva = async () => {
@@ -360,6 +422,8 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
     setCargando(true);
     setMensajeExito("");
     setReservaCreadaId("");
+    setReservaCreada(null);
+    setMensajePago("");
 
     try {
       const fechaIngresoISO = fechaToISO(ingreso);
@@ -411,6 +475,18 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
       ]);
       setSolicitudEnviada(true);
       setReservaCreadaId(`pendiente-${cabanaAsignada}-${fechaIngresoISO}-${fechaSalidaISO}`);
+      setReservaCreada({
+        id: null,
+        anticipo: tarifa.anticipo,
+        total: tarifa.total,
+        lookup: {
+          correo,
+          celular,
+          cabana: cabanaAsignada,
+          fecha_ingreso: fechaIngresoISO,
+          fecha_salida: fechaSalidaISO,
+        },
+      });
       setMensajeExito(
         resultadoCorreo.ok
           ? "Tu solicitud fue enviada correctamente. También enviamos una copia al correo registrado."
@@ -594,18 +670,18 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
             )}
 
             <div className="valor-anticipo-v1">
-              <span>ANTICIPO 40%</span>
+              <span>ANTICIPO A PAGAR</span>
               <strong>${formatoMoneda(tarifa.anticipo)}</strong>
             </div>
 
             <div className="confirmacion-notas">
-              <p>Para confirmar la reserva se solicita el pago del anticipo.</p>
-              <p>El equipo de Refugio La Arboleda revisará la solicitud y confirmará el pago manualmente.</p>
+              <p>Pago seguro por Wompi/PSE para el anticipo calculado.</p>
+              <p>La reserva queda pendiente hasta que Wompi apruebe el pago y el sistema lo confirme automáticamente.</p>
             </div>
 
             <div className="acciones-pago-v1">
-              <button type="button" className="btn-pagar-anticipo" onClick={pagarAnticipo}>
-                Pagar anticipo
+              <button type="button" className="btn-pagar-anticipo" onClick={pagarAnticipo} disabled={preparandoPago}>
+                {preparandoPago ? "Preparando pago seguro..." : "Pagar anticipo"}
               </button>
               <a
                 className="btn-consulta-whatsapp"
@@ -616,6 +692,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
                 Hablar por WhatsApp
               </a>
             </div>
+            {mensajePago && <p className="mensaje-pago-fallback">{mensajePago}</p>}
           </div>
         )}
 
