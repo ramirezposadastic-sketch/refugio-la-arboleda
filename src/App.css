@@ -4438,3 +4438,436 @@ body {
     grid-template-columns: 1fr;
   }
 }
+/* --- Calendario de disponibilidad Admin --- */
+.admin-calendario-disponibilidad {
+  display: grid;
+  gap: 18px;
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid #dfe8d8;
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 14px 36px rgba(31, 77, 43, 0.08);
+}
+
+.admin-calendario-header,
+.admin-calendario-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-calendario-kicker {
+  display: block;
+  color: #7a5b16;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-calendario-header h3 {
+  margin: 4px 0 6px;
+  color: #1f4d2b;
+  font-size: clamp(1.25rem, 2vw, 1.7rem);
+}
+
+.admin-calendario-header p {
+  margin: 0;
+  color: #5b6a5d;
+}
+
+.admin-calendario-controles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-calendario-controles strong {
+  min-width: 160px;
+  color: #243827;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.admin-calendario-controles button,
+.admin-calendario-filtro select {
+  min-height: 40px;
+  border: 1px solid #d7e4d2;
+  border-radius: 10px;
+  background: #f8fbf6;
+  color: #27432c;
+  font-weight: 800;
+  padding: 8px 12px;
+}
+
+.admin-calendario-controles button:hover {
+  background: #edf5eb;
+}
+
+.admin-calendario-leyenda {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: #4b5c4f;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.admin-calendario-leyenda span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.cal-dot.disponible { background: #2e7d32; }
+.cal-dot.parcial { background: #c99a22; }
+.cal-dot.ocupado { background: #c62828; }
+
+.admin-calendario-filtro {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #38563d;
+  font-weight: 800;
+}
+
+.admin-calendario-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.admin-calendario-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(82px, 1fr));
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.admin-calendario-dia-nombre {
+  color: #6b7b6f;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.admin-calendario-dia {
+  min-height: 96px;
+  border: 1px solid #e1e8dc;
+  border-radius: 14px;
+  background: #f9fbf8;
+  color: #243827;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 10px;
+  text-align: left;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+button.admin-calendario-dia {
+  cursor: pointer;
+}
+
+button.admin-calendario-dia:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(31, 77, 43, 0.12);
+}
+
+.admin-calendario-dia.disponible {
+  border-color: #cfe6c8;
+  background: #f0f8ee;
+  color: #1f5c2f;
+}
+
+.admin-calendario-dia.parcial {
+  border-color: #eadca9;
+  background: #fff9e8;
+  color: #76530f;
+}
+
+.admin-calendario-dia.ocupado {
+  border-color: #f0c6c6;
+  background: #fff0f0;
+  color: #8d1f1f;
+}
+
+.admin-calendario-dia.fuera-mes {
+  min-height: 96px;
+  background: #f5f4ef;
+  opacity: 0.45;
+}
+
+.admin-calendario-dia.seleccionado {
+  outline: 3px solid rgba(31, 111, 67, 0.22);
+  border-color: #1f6f43;
+}
+
+.admin-calendario-dia.hoy .admin-calendario-numero {
+  background: #1f6f43;
+  color: #ffffff;
+}
+
+.admin-calendario-numero {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+}
+
+.admin-calendario-estado {
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.admin-calendario-dia strong {
+  font-size: 0.9rem;
+}
+
+.admin-calendario-detalle {
+  position: sticky;
+  top: 92px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid #dfe8d8;
+  border-radius: 16px;
+  background: #fbfdf9;
+  padding: 18px;
+}
+
+.admin-calendario-detalle h4 {
+  margin: 0;
+  color: #1f4d2b;
+}
+
+.admin-calendario-detalle p {
+  margin: 0;
+  color: #526456;
+}
+
+.admin-calendario-badge {
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.admin-calendario-badge.disponible {
+  background: #e6f4e3;
+  color: #1f5c2f;
+}
+
+.admin-calendario-badge.parcial {
+  background: #fff3cf;
+  color: #76530f;
+}
+
+.admin-calendario-badge.ocupado {
+  background: #fde5e5;
+  color: #8d1f1f;
+}
+
+.admin-calendario-cabanas {
+  display: grid;
+  gap: 10px;
+}
+
+.cabana-dia {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #dfe8d8;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.cabana-dia.disponible {
+  background: #f0f8ee;
+}
+
+.cabana-dia.ocupada {
+  background: #fff7f0;
+}
+
+.cabana-dia strong {
+  color: #243827;
+}
+
+.cabana-dia span,
+.cabana-dia small {
+  display: block;
+  color: #526456;
+  line-height: 1.35;
+}
+
+@media (max-width: 980px) {
+  .admin-calendario-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-calendario-detalle {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-calendario-disponibilidad {
+    padding: 16px;
+  }
+
+  .admin-calendario-controles,
+  .admin-calendario-toolbar,
+  .admin-calendario-filtro {
+    width: 100%;
+  }
+
+  .admin-calendario-controles button,
+  .admin-calendario-filtro select {
+    flex: 1;
+  }
+
+  .admin-calendario-grid {
+    grid-template-columns: repeat(7, minmax(66px, 1fr));
+  }
+
+  .admin-calendario-dia,
+  .admin-calendario-dia.fuera-mes {
+    min-height: 82px;
+    padding: 8px;
+  }
+
+  .admin-calendario-estado {
+    display: none;
+  }
+
+  .admin-calendario-dia strong {
+    font-size: 0.78rem;
+  }
+}
+/* --- Ajuste final controles calendario admin --- */
+.admin-calendario-header {
+  align-items: flex-start;
+}
+
+.admin-calendario-header > div:first-child {
+  flex: 1 1 320px;
+}
+
+.admin-calendario-controles {
+  flex: 1 1 460px;
+  display: grid;
+  grid-template-columns: minmax(96px, 120px) minmax(180px, 1fr) minmax(96px, 120px);
+  grid-template-areas:
+    "prev mes next"
+    ". hoy .";
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  max-width: 560px;
+  margin-left: auto;
+}
+
+.admin-calendario-controles button {
+  min-width: 0;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.admin-calendario-controles button:nth-of-type(1) { grid-area: prev; }
+.admin-calendario-controles button:nth-of-type(2) { grid-area: next; }
+.admin-calendario-controles button:nth-of-type(3) {
+  grid-area: hoy;
+  justify-self: center;
+  width: 120px;
+  background: #1f6f43;
+  color: #ffffff;
+  border-color: #1f6f43;
+}
+
+.admin-calendario-controles strong {
+  grid-area: mes;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfe8d8;
+  border-radius: 999px;
+  background: #fffdf6;
+  color: #1f4d2b;
+  font-size: 1rem;
+  font-weight: 900;
+  text-align: center;
+  text-transform: capitalize;
+  padding: 8px 16px;
+}
+
+.admin-calendario-toolbar {
+  align-items: center;
+}
+
+.admin-calendario-filtro {
+  justify-content: flex-end;
+}
+
+.admin-calendario-filtro select {
+  min-width: 150px;
+}
+
+@media (max-width: 900px) {
+  .admin-calendario-header {
+    align-items: stretch;
+  }
+
+  .admin-calendario-controles {
+    margin-left: 0;
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-calendario-controles {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "mes"
+      "prev"
+      "next"
+      "hoy";
+  }
+
+  .admin-calendario-controles button:nth-of-type(3) {
+    width: 100%;
+  }
+
+  .admin-calendario-filtro {
+    justify-content: stretch;
+  }
+
+  .admin-calendario-filtro select {
+    width: 100%;
+  }
+}

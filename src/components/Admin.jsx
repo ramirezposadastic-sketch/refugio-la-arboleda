@@ -9,6 +9,7 @@ import {
   normalizarCabana,
   normalizarEstado,
   rangoDisponible,
+  sumarDias,
 } from "../lib/reservas";
 import { generarMensajeReservaWhatsApp } from "../lib/notificacionesReserva";
 import { formatearFechaHoraColombia, formatearFechaReserva } from "../utils/fechas";
@@ -265,6 +266,12 @@ function Admin() {
   const [archivoFoto, setArchivoFoto] = useState(null);
   const [cargandoFotos, setCargandoFotos] = useState(false);
   const [errorFotos, setErrorFotos] = useState("");
+  const [mesCalendarioAdmin, setMesCalendarioAdmin] = useState(() => {
+    const hoy = new Date();
+    return { year: hoy.getFullYear(), month: hoy.getMonth() };
+  });
+  const [filtroCabanaCalendario, setFiltroCabanaCalendario] = useState(FILTRO_TODAS);
+  const [fechaSeleccionadaCalendario, setFechaSeleccionadaCalendario] = useState(() => fechaToISO(new Date()));
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
@@ -956,6 +963,128 @@ function Admin() {
     return { ingresosMes, saldosPendientes, porMes, porCabana };
   }, [reservas]);
 
+  const fechaISOCalendario = (year, month, day) => {
+    const mes = String(month + 1).padStart(2, "0");
+    const dia = String(day).padStart(2, "0");
+    return `${year}-${mes}-${dia}`;
+  };
+
+  const nombreMesCalendario = (year, month) =>
+    new Date(year, month, 1).toLocaleDateString("es-CO", {
+      month: "long",
+      year: "numeric",
+    });
+
+  const reservaBloqueaCalendario = (reserva) =>
+    ["pendiente", "confirmada"].includes(normalizarEstado(reserva?.estado));
+
+  const reservaOcupaFechaCalendario = (reserva, fechaISO) => {
+    if (!reservaBloqueaCalendario(reserva)) return false;
+    const ingreso = fechaToISO(reserva.fecha_ingreso);
+    const salida = fechaToISO(reserva.fecha_salida);
+    if (!ingreso || !salida) return false;
+    return fechaISO >= ingreso && fechaISO < salida;
+  };
+
+  const reservasDeCabanaEnFecha = (fechaISO, cabana) =>
+    reservas.filter(
+      (reserva) =>
+        normalizarCabana(reserva.cabana) === cabana &&
+        reservaOcupaFechaCalendario(reserva, fechaISO),
+    );
+
+  const obtenerDetalleDiaCalendario = (fechaISO) => {
+    const cabanas = CABANAS.map((cabana) => {
+      const reservasCabana = reservasDeCabanaEnFecha(fechaISO, cabana);
+      return {
+        cabana,
+        ocupada: reservasCabana.length > 0,
+        reserva: reservasCabana[0] || null,
+      };
+    });
+    const cabanasFiltradas =
+      filtroCabanaCalendario === FILTRO_TODAS
+        ? cabanas
+        : cabanas.filter((item) => item.cabana === filtroCabanaCalendario);
+    const libres = cabanasFiltradas.filter((item) => !item.ocupada).length;
+    const total = cabanasFiltradas.length || CABANAS.length;
+    const estado = libres === total ? "disponible" : libres === 0 ? "ocupado" : "parcial";
+
+    return {
+      fechaISO,
+      cabanas,
+      cabanasFiltradas,
+      libres,
+      total,
+      estado,
+    };
+  };
+
+  const diasCalendarioAdmin = (() => {
+    const { year, month } = mesCalendarioAdmin;
+    const primerDia = new Date(year, month, 1);
+    const diasDelMes = new Date(year, month + 1, 0).getDate();
+    const offsetLunes = (primerDia.getDay() + 6) % 7;
+    const dias = [];
+
+    for (let i = 0; i < offsetLunes; i += 1) {
+      dias.push({ fueraMes: true, key: `vacio-inicio-${i}` });
+    }
+
+    for (let day = 1; day <= diasDelMes; day += 1) {
+      const fechaISO = fechaISOCalendario(year, month, day);
+      dias.push({
+        key: fechaISO,
+        day,
+        fechaISO,
+        fueraMes: false,
+        ...obtenerDetalleDiaCalendario(fechaISO),
+      });
+    }
+
+    while (dias.length % 7 !== 0) {
+      dias.push({ fueraMes: true, key: `vacio-fin-${dias.length}` });
+    }
+
+    return dias;
+  })();
+
+  const detalleDiaSeleccionado = obtenerDetalleDiaCalendario(fechaSeleccionadaCalendario);
+
+  const cambiarMesCalendario = (delta) => {
+    setMesCalendarioAdmin((actual) => {
+      const fecha = new Date(actual.year, actual.month + delta, 1);
+      return { year: fecha.getFullYear(), month: fecha.getMonth() };
+    });
+  };
+
+  const volverMesActualCalendario = () => {
+    const hoy = new Date();
+    setMesCalendarioAdmin({ year: hoy.getFullYear(), month: hoy.getMonth() });
+    setFechaSeleccionadaCalendario(fechaToISO(hoy));
+  };
+
+  const abrirNuevaReservaDesdeCalendario = () => {
+    if (!validarRolOperativo()) return;
+
+    const salida = fechaToISO(sumarDias(new Date(`${fechaSeleccionadaCalendario}T00:00:00`), 1));
+    const cabanaSugerida =
+      filtroCabanaCalendario !== FILTRO_TODAS
+        ? filtroCabanaCalendario
+        : detalleDiaSeleccionado.cabanasFiltradas.find((item) => !item.ocupada)?.cabana || CABANAS[0];
+
+    setModoCrear(true);
+    setValoresManuales(false);
+    setReservaEditando(
+      aplicarCalculoAutomatico({
+        ...crearReservaVacia(),
+        fecha_ingreso: fechaSeleccionadaCalendario,
+        fecha_salida: salida,
+        cabana: cabanaSugerida,
+      }),
+    );
+    setMostrarModal(true);
+  };
   const exportarCsv = () => {
     if (!validarSoloAdmin()) return;
 
@@ -1223,6 +1352,90 @@ function Admin() {
         </div>
       </div>
 
+      <section className="admin-calendario-disponibilidad">
+        <div className="admin-calendario-header">
+          <div>
+            <span className="admin-calendario-kicker">Calendario</span>
+            <h3>Calendario de disponibilidad</h3>
+            <p>Consulta rápidamente qué fechas están ocupadas o disponibles por cabaña.</p>
+          </div>
+          <div className="admin-calendario-controles">
+            <button type="button" onClick={() => cambiarMesCalendario(-1)}>Anterior</button>
+            <strong>{nombreMesCalendario(mesCalendarioAdmin.year, mesCalendarioAdmin.month)}</strong>
+            <button type="button" onClick={() => cambiarMesCalendario(1)}>Siguiente</button>
+            <button type="button" onClick={volverMesActualCalendario}>Hoy</button>
+          </div>
+        </div>
+
+        <div className="admin-calendario-toolbar">
+          <div className="admin-calendario-leyenda" aria-label="Leyenda de disponibilidad">
+            <span><i className="cal-dot disponible" />Disponible</span>
+            <span><i className="cal-dot parcial" />Parcial</span>
+            <span><i className="cal-dot ocupado" />Ocupado</span>
+          </div>
+          <label className="admin-calendario-filtro">
+            Cabaña
+            <select value={filtroCabanaCalendario} onChange={(event) => setFiltroCabanaCalendario(event.target.value)}>
+              <option>{FILTRO_TODAS}</option>
+              {CABANAS.map((cabanaItem) => <option key={cabanaItem}>{cabanaItem}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="admin-calendario-layout">
+          <div className="admin-calendario-grid" aria-label="Calendario de disponibilidad mensual">
+            {["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"].map((dia) => (
+              <div className="admin-calendario-dia-nombre" key={dia}>{dia}</div>
+            ))}
+            {diasCalendarioAdmin.map((dia) => (
+              dia.fueraMes ? (
+                <div className="admin-calendario-dia fuera-mes" key={dia.key} aria-hidden="true" />
+              ) : (
+                <button
+                  type="button"
+                  key={dia.key}
+                  className={`admin-calendario-dia ${dia.estado} ${dia.fechaISO === fechaSeleccionadaCalendario ? "seleccionado" : ""} ${dia.fechaISO === fechaToISO(new Date()) ? "hoy" : ""}`}
+                  onClick={() => setFechaSeleccionadaCalendario(dia.fechaISO)}
+                  title={dia.cabanasFiltradas.map((item) => `${item.cabana}: ${item.ocupada ? "Ocupada" : "Disponible"}`).join(" | ")}
+                >
+                  <span className="admin-calendario-numero">{dia.day}</span>
+                  <span className="admin-calendario-estado">{dia.estado === "disponible" ? "Disponible" : dia.estado === "parcial" ? "Parcial" : "Ocupado"}</span>
+                  <strong>{dia.libres}/{dia.total} libres</strong>
+                </button>
+              )
+            ))}
+          </div>
+
+          <aside className="admin-calendario-detalle">
+            <span className={`admin-calendario-badge ${detalleDiaSeleccionado.estado}`}>
+              {detalleDiaSeleccionado.estado === "disponible" ? "Disponible" : detalleDiaSeleccionado.estado === "parcial" ? "Parcial" : "Ocupado"}
+            </span>
+            <h4>Disponibilidad del {fechaLegible(fechaSeleccionadaCalendario)}</h4>
+            <p>{detalleDiaSeleccionado.libres}/{detalleDiaSeleccionado.total} cabañas libres para nueva reserva.</p>
+            <div className="admin-calendario-cabanas">
+              {detalleDiaSeleccionado.cabanasFiltradas.map((item) => (
+                <article className={item.ocupada ? "cabana-dia ocupada" : "cabana-dia disponible"} key={item.cabana}>
+                  <strong>{item.cabana}</strong>
+                  {item.ocupada ? (
+                    <div>
+                      <span>Ocupada por: {item.reserva?.nombre || "Cliente sin nombre"}</span>
+                      <small>Ingreso: {fechaLegible(item.reserva?.fecha_ingreso)}</small>
+                      <small>Salida: {fechaLegible(item.reserva?.fecha_salida)}</small>
+                      <small>Estado: {item.reserva?.estado || "Pendiente"}</small>
+                      <small>Pago: {item.reserva?.pago_confirmado ? "Confirmado" : etiquetaEstadoPagoWompi(item.reserva?.pago_estado)}</small>
+                    </div>
+                  ) : (
+                    <span>Disponible para nueva reserva</span>
+                  )}
+                </article>
+              ))}
+            </div>
+            <button type="button" className="btn-nueva-reserva" onClick={abrirNuevaReservaDesdeCalendario}>
+              Crear reserva para esta fecha
+            </button>
+          </aside>
+        </div>
+      </section>
       {esAdmin && mostrarGestionFotos && (
         <section className="admin-fotos">
           <div className="admin-fotos-header">
