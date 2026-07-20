@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabase";
 import {
   CABANAS,
@@ -252,6 +252,10 @@ function Admin() {
   const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
   const [filtroPago, setFiltroPago] = useState(FILTRO_TODOS);
   const [filtroFecha, setFiltroFecha] = useState(FILTRO_TODOS);
+  const reservasScrollRef = useRef(null);
+  const [puedeMoverIzquierda, setPuedeMoverIzquierda] = useState(false);
+  const [puedeMoverDerecha, setPuedeMoverDerecha] = useState(false);
+  const [mostrarControlesTabla, setMostrarControlesTabla] = useState(false);
   const [reservas, setReservas] = useState([]);
   const [reservasEliminadas, setReservasEliminadas] = useState([]);
   const [mostrarHistorialEliminadas, setMostrarHistorialEliminadas] = useState(false);
@@ -933,6 +937,49 @@ function Admin() {
     });
   }, [reservas, busqueda, filtroEstado, filtroCabana, filtroPago, filtroFecha]);
 
+  const actualizarEstadoScrollReservas = useCallback(() => {
+    const contenedor = reservasScrollRef.current;
+    const tolerancia = 4;
+
+    if (!contenedor) {
+      setPuedeMoverIzquierda(false);
+      setPuedeMoverDerecha(false);
+      setMostrarControlesTabla(false);
+      return;
+    }
+
+    const tieneDesbordamiento = contenedor.scrollWidth - contenedor.clientWidth > tolerancia;
+    setMostrarControlesTabla(tieneDesbordamiento);
+    setPuedeMoverIzquierda(tieneDesbordamiento && contenedor.scrollLeft > tolerancia);
+    setPuedeMoverDerecha(
+      tieneDesbordamiento &&
+        contenedor.scrollLeft + contenedor.clientWidth < contenedor.scrollWidth - tolerancia,
+    );
+  }, []);
+
+  const moverTablaReservas = (cantidad) => {
+    reservasScrollRef.current?.scrollBy({
+      left: cantidad,
+      behavior: "smooth",
+    });
+
+    window.setTimeout(actualizarEstadoScrollReservas, 360);
+  };
+
+  useEffect(() => {
+    const contenedor = reservasScrollRef.current;
+    const actualizar = () => actualizarEstadoScrollReservas();
+    const frame = window.requestAnimationFrame(actualizar);
+
+    contenedor?.addEventListener("scroll", actualizar, { passive: true });
+    window.addEventListener("resize", actualizar);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      contenedor?.removeEventListener("scroll", actualizar);
+      window.removeEventListener("resize", actualizar);
+    };
+  }, [actualizarEstadoScrollReservas, reservasFiltradas.length]);
   const reportes = useMemo(() => {
     const hoy = new Date();
     const mesActual = hoy.getMonth();
@@ -1329,11 +1376,11 @@ function Admin() {
         {esAdmin && (
           <section className="admin-metricas-bloque resumen-financiero-admin">
             <h3>Resumen financiero</h3>
-            <div className="admin-stats admin-stats-profesional">
-              <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
-              <div className="stat-card anticipos"><h3>${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
-              <div className="stat-card saldos"><h3>${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
-              <div className="stat-card ingresos"><h3>${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
+            <div className="admin-stats admin-stats-profesional resumen-financiero-grid">
+              <div className="stat-card ventas"><h3 className="valor-financiero">${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
+              <div className="stat-card anticipos"><h3 className="valor-financiero">${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
+              <div className="stat-card saldos"><h3 className="valor-financiero">${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
+              <div className="stat-card ingresos"><h3 className="valor-financiero">${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
             </div>
           </section>
         )}
@@ -1616,11 +1663,35 @@ function Admin() {
         </div>
       )}
 
-      <div className="admin-toolbar">
+      <div className="admin-toolbar admin-toolbar-reservas">
         <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
-        <span>{reservasFiltradas.length} reservas visibles</span>
+        <div className="admin-toolbar-reservas-info">
+          <span>{reservasFiltradas.length} reservas visibles</span>
+          {mostrarControlesTabla && (
+            <div className="reservas-scroll-toolbar" aria-label="Controles de desplazamiento horizontal de reservas">
+              <span className="reservas-scroll-label">Desplazar tabla</span>
+              <button
+                type="button"
+                className="reservas-scroll-button"
+                onClick={() => moverTablaReservas(-500)}
+                disabled={!puedeMoverIzquierda}
+                aria-label="Mover tabla hacia la izquierda"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="reservas-scroll-button"
+                onClick={() => moverTablaReservas(500)}
+                disabled={!puedeMoverDerecha}
+                aria-label="Mover tabla hacia la derecha"
+              >
+                →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-
       <div className="admin-filtros admin-filtros-profesional">
         <input type="text" placeholder="Buscar por nombre o celular..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
@@ -1644,7 +1715,7 @@ function Admin() {
         </select>
       </div>
 
-      <div className="admin-tabla-wrapper">
+      <div className="admin-tabla-wrapper reservas-table-scroll" ref={reservasScrollRef}>
         <table>
           <thead>
             <tr>
@@ -1821,4 +1892,9 @@ function Admin() {
 }
 
 export default Admin;
+
+
+
+
+
 

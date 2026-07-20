@@ -4943,3 +4943,540 @@ button.admin-calendario-dia:hover {
     max-width: 220px;
   }
 }
+/* --- Modernizacion visual final Admin --- */
+.admin {
+  --admin-green: #245f37;
+  --admin-green-dark: #163f27;
+  --admin-green-soft: #edf6ef;
+  --admin-border: rgba(34, 82, 48, 0.11);
+  --admin-muted: #5c6f60;
+  --admin-bg: #f7f9f6;
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  background: var(--admin-bg);
+  color: #1f2f24;
+  letter-spacing: 0;
+}
+
+.admin h2 {
+  color: var(--admin-green-dark);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.admin h3 {
+  color: var(--admin-green-dark);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.admin p,
+.admin td,
+.admin input,
+.admin select,
+.admin button {
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+.admin-header,
+.admin-metricas-bloque,
+.admin-reportes > div,
+.admin-filtros-profesional,
+.admin-calendario-disponibilidad,
+.admin-historial-eliminadas,
+.admin-fotos,
+.admin-tabla-wrapper {
+  background: #ffffff;
+  border: 1px solid var(--admin-border);
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(26, 55, 34, 0.07);
+}
+
+.admin-header {
+  padding: 24px;
+  margin-bottom: 22px;
+  gap: 18px;
+}
+
+.admin-header p,
+.admin-calendario-header p,
+.admin-usuarios-header p,
+.admin-fotos-header p {
+  color: var(--admin-muted);
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.admin-header-actions .btn-exportar,
+.admin-header-actions .btn-fotos-admin,
+.admin-header-actions .btn-historial,
+.admin-header-actions .btn-salir {
+  width: auto;
+  min-width: auto;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.admin-header-actions .btn-exportar {
+  background: var(--admin-green);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(36, 95, 55, 0.18);
+}
+
+.admin-header-actions .btn-fotos-admin,
+.admin-header-actions .btn-historial {
+  border: 1px solid rgba(36, 95, 55, 0.18);
+  background: #ffffff;
+  color: var(--admin-green);
+}
+
+.admin-header-actions .btn-salir {
+  background: #3f4640;
+  color: #ffffff;
+}
+
+.admin-header-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(26, 55, 34, 0.12);
+}
+
+.admin-metricas-bloques,
+.admin-reportes {
+  gap: 18px;
+}
+
+.admin-metricas-bloque {
+  padding: 20px;
+}
+
+.admin-metricas-bloque > h3,
+.admin-reportes h3 {
+  margin-bottom: 14px;
+  font-size: 1rem;
+  text-transform: none;
+}
+
+.admin-stats-profesional {
+  gap: 14px;
+}
+
+.admin .stat-card {
+  min-height: 126px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border: 1px solid rgba(34, 82, 48, 0.09);
+  border-radius: 18px;
+  box-shadow: none;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdfb 100%);
+  padding: 18px;
+}
+
+.admin .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(26, 55, 34, 0.08);
+}
+
+.admin .stat-card h3 {
+  margin: 0 0 6px;
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.admin .stat-card p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.admin-reportes > div {
+  padding: 20px;
+}
+
+.admin-reportes p {
+  color: #304437;
+  font-size: 0.9rem;
+}
+
+.admin-toolbar-reservas {
+  position: sticky;
+  top: 10px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(34, 82, 48, 0.09);
+  border-radius: 16px;
+  background: rgba(247, 249, 246, 0.94);
+  backdrop-filter: blur(8px);
+  padding: 10px;
+  margin: 18px 0 12px;
+}
+
+.admin-toolbar-reservas .btn-nueva-reserva {
+  min-height: 42px;
+  margin: 0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.admin-toolbar-reservas-info {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-toolbar-reservas-info > span {
+  color: var(--admin-muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.reservas-scroll-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.reservas-scroll-label {
+  color: var(--admin-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  margin-right: 2px;
+}
+
+.reservas-scroll-button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(34, 82, 48, 0.15);
+  border-radius: 12px;
+  background: #ffffff;
+  color: var(--admin-green);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(30, 65, 38, 0.08);
+  font-size: 1.35rem;
+  font-weight: 800;
+  line-height: 1;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.reservas-scroll-button:hover:not(:disabled) {
+  background: #2f7643;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 7px 18px rgba(30, 90, 48, 0.18);
+}
+
+.reservas-scroll-button:focus-visible,
+.admin button:focus-visible,
+.admin input:focus-visible,
+.admin select:focus-visible {
+  outline: 3px solid rgba(197, 151, 73, 0.4);
+  outline-offset: 2px;
+}
+
+.reservas-scroll-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.admin-filtros-profesional {
+  padding: 16px;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-filtros-profesional input,
+.admin-filtros-profesional select,
+.admin-calendario-filtro select {
+  min-height: 44px;
+  border: 1px solid rgba(34, 82, 48, 0.14);
+  border-radius: 12px;
+  background: #ffffff;
+  color: #233b2a;
+  font-size: 0.88rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.admin-filtros-profesional input {
+  flex: 1 1 320px;
+}
+
+.admin-filtros-profesional select {
+  flex: 0 1 180px;
+}
+
+.reservas-table-scroll {
+  max-height: min(72vh, 760px);
+  overflow: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 18px;
+}
+
+.reservas-table-scroll table {
+  min-width: 1420px;
+}
+
+.reservas-table-scroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  background: #245f37;
+}
+
+.admin th {
+  padding: 13px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.admin td {
+  padding: 14px;
+  border-bottom: 1px solid rgba(34, 82, 48, 0.07);
+  color: #2f3d33;
+  font-size: 0.86rem;
+}
+
+.reservas-table-scroll tbody tr {
+  transition: background 0.15s ease;
+}
+
+.reservas-table-scroll tbody tr:hover {
+  background: #f7faf6;
+}
+
+.estado,
+.badge-nueva,
+.pago-ok,
+.pago-pendiente,
+.pago-wompi-detalle span,
+.observaciones-vacias-admin {
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.estado {
+  padding: 6px 10px;
+}
+
+.badge-nueva {
+  padding: 5px 9px;
+  background: #fff6df;
+  color: #8a5d00;
+}
+
+.pago-ok,
+.pago-pendiente {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 10px;
+}
+
+.acciones-admin {
+  gap: 7px;
+}
+
+.acciones-admin button,
+.btn-link-pago {
+  min-height: 30px;
+  border-radius: 9px;
+  font-size: 0.73rem;
+  font-weight: 650;
+}
+
+.admin-calendario-disponibilidad {
+  padding: 22px;
+}
+
+.admin-calendario-controles button,
+.admin-calendario-filtro select {
+  min-height: 40px;
+  border-radius: 12px;
+  font-weight: 650;
+}
+
+.admin-calendario-detalle,
+.cabana-dia {
+  border-color: rgba(34, 82, 48, 0.11);
+  box-shadow: 0 8px 24px rgba(26, 55, 34, 0.06);
+}
+
+@media (max-width: 760px) {
+  .admin-header,
+  .admin-metricas-bloque,
+  .admin-reportes > div,
+  .admin-filtros-profesional,
+  .admin-calendario-disponibilidad {
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  .admin-toolbar-reservas {
+    align-items: stretch;
+    flex-direction: column;
+    top: 8px;
+  }
+
+  .admin-toolbar-reservas-info {
+    justify-content: space-between;
+  }
+
+  .reservas-scroll-label {
+    display: none;
+  }
+
+  .reservas-scroll-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .admin-filtros-profesional input,
+  .admin-filtros-profesional select {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .reservas-table-scroll {
+    max-height: 70vh;
+  }
+}
+
+/* --- Ajuste final valores resumen financiero --- */
+.resumen-financiero-admin .admin-stats-profesional {
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  align-items: stretch;
+}
+
+.resumen-financiero-admin .stat-card {
+  min-width: 0;
+  overflow: hidden;
+  min-height: 132px;
+  height: 100%;
+  align-items: center;
+  text-align: center;
+}
+
+.resumen-financiero-admin .stat-card h3 {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 8px;
+  font-size: clamp(1.45rem, 2.2vw, 2.35rem);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-wrap: balance;
+}
+
+.resumen-financiero-admin .stat-card p {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.25;
+}
+
+@media (max-width: 520px) {
+  .resumen-financiero-admin .admin-stats-profesional {
+    grid-template-columns: 1fr;
+  }
+
+  .resumen-financiero-admin .stat-card {
+    min-height: 116px;
+    padding: 16px 14px;
+  }
+
+  .resumen-financiero-admin .stat-card h3 {
+    font-size: clamp(1.35rem, 8vw, 1.9rem);
+  }
+}
+
+/* --- Correccion valores financieros sin saltos --- */
+.resumen-financiero-admin .resumen-financiero-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+
+.resumen-financiero-admin .resumen-financiero-grid .stat-card {
+  min-width: 0;
+  width: 100%;
+  min-height: 120px;
+  height: 100%;
+  overflow: hidden;
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.resumen-financiero-admin .valor-financiero {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0 0 8px;
+  white-space: nowrap;
+  text-align: center;
+  word-break: normal;
+  overflow-wrap: normal;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  line-height: 1.1;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+@media (max-width: 520px) {
+  .resumen-financiero-admin .resumen-financiero-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resumen-financiero-admin .valor-financiero {
+    font-size: clamp(1.45rem, 8vw, 2rem);
+  }
+}
