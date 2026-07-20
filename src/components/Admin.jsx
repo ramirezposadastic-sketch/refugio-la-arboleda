@@ -1326,15 +1326,17 @@ function Admin() {
           </div>
         </section>
 
-        <section className="admin-metricas-bloque">
-          <h3>Resumen financiero</h3>
-          <div className="admin-stats admin-stats-profesional">
-            <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
-            <div className="stat-card anticipos"><h3>${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
-            <div className="stat-card saldos"><h3>${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
-            <div className="stat-card ingresos"><h3>${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
-          </div>
-        </section>
+        {esAdmin && (
+          <section className="admin-metricas-bloque resumen-financiero-admin">
+            <h3>Resumen financiero</h3>
+            <div className="admin-stats admin-stats-profesional">
+              <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
+              <div className="stat-card anticipos"><h3>${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
+              <div className="stat-card saldos"><h3>${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
+              <div className="stat-card ingresos"><h3>${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
+            </div>
+          </section>
+        )}
       </div>
 
       <div className="admin-reportes">
@@ -1423,6 +1425,7 @@ function Admin() {
                       <small>Salida: {fechaLegible(item.reserva?.fecha_salida)}</small>
                       <small>Estado: {item.reserva?.estado || "Pendiente"}</small>
                       <small>Pago: {item.reserva?.pago_confirmado ? "Confirmado" : etiquetaEstadoPagoWompi(item.reserva?.pago_estado)}</small>
+                      <small>Observaciones: {item.reserva?.observaciones?.trim() || "Sin observaciones"}</small>
                     </div>
                   ) : (
                     <span>Disponible para nueva reserva</span>
@@ -1659,6 +1662,7 @@ function Admin() {
               <th>Saldo</th>
               <th>Estado</th>
               <th>Pago</th>
+              <th>Observaciones</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -1705,6 +1709,16 @@ function Admin() {
                         </button>
                       )}
                     </div>
+                  )}
+                </td>
+                <td>
+                  {r.observaciones?.trim() ? (
+                    <div className="observaciones-reserva-admin">
+                      <strong>Observaciones</strong>
+                      <p>{r.observaciones}</p>
+                    </div>
+                  ) : (
+                    <span className="observaciones-vacias-admin">Sin observaciones</span>
                   )}
                 </td>
                 <td>
@@ -1777,7 +1791,16 @@ function Admin() {
               </p>
             </div>
 
-            <textarea placeholder="Observaciones" value={reservaEditando.observaciones || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, observaciones: e.target.value })} />
+            <label className="observaciones-modal-admin" htmlFor="observaciones-reserva-admin">
+              Observaciones
+              <textarea
+                id="observaciones-reserva-admin"
+                name="observaciones"
+                placeholder="Ej. decoración especial, alergias, hora estimada de llegada..."
+                value={reservaEditando.observaciones || ""}
+                onChange={(e) => setReservaEditando({ ...reservaEditando, observaciones: e.target.value })}
+              />
+            </label>
 
             <label className="check-pago">
               <input type="checkbox" checked={reservaEditando.pago_confirmado || false} onChange={(e) => actualizarCampoReserva("pago_confirmado", e.target.checked)} disabled={!esAdmin} />

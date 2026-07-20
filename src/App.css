@@ -4871,3 +4871,75 @@ button.admin-calendario-dia:hover {
     width: 100%;
   }
 }
+/* --- Observaciones de reservas en Admin --- */
+.observaciones-reserva-admin {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  max-width: 260px;
+  border: 1px solid #dfe8d8;
+  border-radius: 10px;
+  background: #f8fbf6;
+  padding: 8px 10px;
+  color: #334637;
+}
+
+.observaciones-reserva-admin strong {
+  color: #1f4d2b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.observaciones-reserva-admin p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  color: #435445;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.observaciones-vacias-admin {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  border: 1px dashed #d8e0d3;
+  border-radius: 999px;
+  background: #fafbf8;
+  color: #7a8678;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.observaciones-modal-admin {
+  display: grid;
+  gap: 8px;
+  color: #44523f;
+  font-weight: 800;
+}
+
+.observaciones-modal-admin textarea {
+  min-height: 110px;
+  resize: vertical;
+  background: #fffef8;
+}
+
+.cabana-dia small:last-child {
+  margin-top: 4px;
+  border-top: 1px solid rgba(31, 77, 43, 0.1);
+  padding-top: 6px;
+}
+
+@media (max-width: 760px) {
+  .observaciones-reserva-admin {
+    min-width: 160px;
+    max-width: 220px;
+  }
+}

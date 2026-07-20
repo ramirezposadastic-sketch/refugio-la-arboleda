@@ -1,4 +1,4 @@
-﻿import { calcularNoches, formatoMoneda } from "./reservas";
+import { calcularNoches, formatoMoneda } from "./reservas";
 import { formatearFechaReserva } from "../utils/fechas";
 
 function fechaLegible(fecha) {
@@ -34,6 +34,7 @@ Total: $${formatoMoneda(valorReserva(reserva, "total"))}
 Anticipo 40%: $${formatoMoneda(valorReserva(reserva, "anticipo"))}
 Saldo pendiente: $${formatoMoneda(valorReserva(reserva, "saldo_pendiente"))}
 Estado: ${reserva?.estado || "Pendiente"}
+Observaciones: ${reserva?.observaciones?.trim() || "Sin observaciones"}
 Términos aceptados: Sí
   `.trim();
 }
