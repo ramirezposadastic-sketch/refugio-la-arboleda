@@ -218,7 +218,16 @@ function aplicarCalculoAutomatico(reserva) {
     saldo_pendiente: tarifa.saldoPendiente,
   };
 }
+function calcularValoresManualTotal(total) {
+  const totalSeguro = Math.max(0, Number(total || 0));
+  const anticipo = Math.round(totalSeguro * 0.4);
 
+  return {
+    total: totalSeguro,
+    anticipo,
+    saldo_pendiente: Math.max(totalSeguro - anticipo, 0),
+  };
+}
 function limpiarNombreArchivo(nombre) {
   const extension = nombre.includes(".") ? nombre.split(".").pop() : "jpg";
   const base = nombre
@@ -429,6 +438,7 @@ function Admin() {
 
   const esAdmin = rolUsuario === ROL_ADMIN;
   const esEmpleado = rolUsuario === ROL_EMPLEADO;
+  const puedeEditarTarifas = esAdmin || esEmpleado;
 
   const validarSoloAdmin = () => {
     if (!validarAdminAutorizado()) return false;
@@ -774,20 +784,16 @@ function Admin() {
   };
 
   const actualizarImporte = (campo, valor) => {
-    if (!esAdmin) {
+    if (!puedeEditarTarifas) {
       alert(MENSAJE_SIN_PERMISOS);
       return;
     }
 
-    const numero = Number(valor || 0);
     setValoresManuales(true);
-    setReservaEditando((actual) => {
-      const nuevo = { ...actual, [campo]: numero };
-      if (campo === "total" || campo === "anticipo") {
-        nuevo.saldo_pendiente = Math.max(Number(nuevo.total || 0) - Number(nuevo.anticipo || 0), 0);
-      }
-      return nuevo;
-    });
+    setReservaEditando((actual) => ({
+      ...actual,
+      ...calcularValoresManualTotal(valor),
+    }));
   };
 
   const subirFotoSitio = async (event) => {
@@ -1849,16 +1855,16 @@ function Admin() {
             <div className="modal-seccion">
               <h3>Valores</h3>
               <div className="modal-grid">
-                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} disabled={!esAdmin} /></label>
-                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!esAdmin} /></label>
-                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!esAdmin} /></label>
+                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} disabled={!puedeEditarTarifas} /></label>
+                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!puedeEditarTarifas} /></label>
+                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!puedeEditarTarifas} /></label>
               </div>
               <p className="nota-valores">
                 {valoresManuales
                   ? "Valores manuales activos."
-                  : esAdmin
-                    ? "Los valores se recalculan automaticamente con fechas y huespedes."
-                    : "Empleado: los valores se recalculan automaticamente y no se pueden editar manualmente."}
+                  : puedeEditarTarifas
+                    ? "Puedes ajustar estos valores manualmente si la reserva lo requiere."
+                    : "Los valores se recalculan automaticamente y no se pueden editar manualmente."}
               </p>
             </div>
 
@@ -1892,9 +1898,3 @@ function Admin() {
 }
 
 export default Admin;
-
-
-
-
-
-
