@@ -789,10 +789,21 @@ function Admin() {
       return;
     }
 
+    const numero = Math.max(0, Number(valor || 0));
+    setValoresManuales(true);
+    setReservaEditando((actual) => ({ ...actual, [campo]: numero }));
+  };
+
+  const recalcularValoresEstandar = () => {
+    if (!puedeEditarTarifas) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return;
+    }
+
     setValoresManuales(true);
     setReservaEditando((actual) => ({
       ...actual,
-      ...calcularValoresManualTotal(valor),
+      ...calcularValoresManualTotal(actual.total),
     }));
   };
 
@@ -1859,12 +1870,11 @@ function Admin() {
                 <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!puedeEditarTarifas} /></label>
                 <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!puedeEditarTarifas} /></label>
               </div>
+              <button type="button" className="btn-copiar" onClick={recalcularValoresEstandar} disabled={!puedeEditarTarifas}>
+                Recalcular según 40%
+              </button>
               <p className="nota-valores">
-                {valoresManuales
-                  ? "Valores manuales activos."
-                  : puedeEditarTarifas
-                    ? "Puedes ajustar estos valores manualmente si la reserva lo requiere."
-                    : "Los valores se recalculan automaticamente y no se pueden editar manualmente."}
+                Puedes ajustar los valores manualmente. Usa "Recalcular según 40%" para restaurar el cálculo estándar.
               </p>
             </div>
 
@@ -1898,3 +1908,4 @@ function Admin() {
 }
 
 export default Admin;
+
