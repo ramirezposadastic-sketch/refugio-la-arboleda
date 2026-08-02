@@ -1870,11 +1870,14 @@ function Admin() {
                 <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!puedeEditarTarifas} /></label>
                 <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!puedeEditarTarifas} /></label>
               </div>
-              <button type="button" className="btn-copiar" onClick={recalcularValoresEstandar} disabled={!puedeEditarTarifas}>
-                Recalcular según 40%
-              </button>
+              <div className="acciones-valores-reserva">
+                <button type="button" className="recalcular-valores-btn" onClick={recalcularValoresEstandar} disabled={!puedeEditarTarifas}>
+                  <span aria-hidden="true">↻</span>
+                  Recalcular 40%
+                </button>
+              </div>
               <p className="nota-valores">
-                Puedes ajustar los valores manualmente. Usa "Recalcular según 40%" para restaurar el cálculo estándar.
+                Puedes ajustar los valores manualmente. Usa "Recalcular 40%" para restaurar el cálculo estándar.
               </p>
             </div>
 
@@ -1908,4 +1911,5 @@ function Admin() {
 }
 
 export default Admin;
+
 
