@@ -1,3 +1,5 @@
+import { calcularSaldo } from "./valoresReserva.js";
+
 export const CABANAS = ["Cabaña 1", "Cabaña 2", "Cabaña 3"];
 
 export const ESTADOS_BLOQUEAN = ["pendiente", "confirmada"];
@@ -111,7 +113,7 @@ export function calcularTarifaReserva({ adultos, ninosMenores, fechaIngreso, fec
   const descuentoValor = Math.round(subtotalSinDescuento * (descuentoPorcentaje / 100));
   const total = subtotalSinDescuento - descuentoValor;
   const anticipo = Math.round(total * PORCENTAJE_ANTICIPO);
-  const saldoPendiente = total - anticipo;
+  const saldoPendiente = calcularSaldo(total, anticipo);
   const reservaLarga = noches > 3;
 
   return {

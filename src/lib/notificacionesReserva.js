@@ -1,5 +1,6 @@
 import { calcularNoches, formatoMoneda } from "./reservas";
 import { formatearFechaReserva } from "../utils/fechas";
+import { calcularSaldo } from "./valoresReserva";
 
 function fechaLegible(fecha) {
   if (!fecha) return "Pendiente";
@@ -31,8 +32,8 @@ Noches: ${noches || 0}
 Adultos: ${reserva?.adultos ?? "-"}
 Niños menores de 8 años: ${reserva?.ninos_menores ?? 0}
 Total: $${formatoMoneda(valorReserva(reserva, "total"))}
-Anticipo 40%: $${formatoMoneda(valorReserva(reserva, "anticipo"))}
-Saldo pendiente: $${formatoMoneda(valorReserva(reserva, "saldo_pendiente"))}
+Anticipo registrado: $${formatoMoneda(valorReserva(reserva, "anticipo"))}
+Saldo pendiente: $${formatoMoneda(calcularSaldo(valorReserva(reserva, "total"), valorReserva(reserva, "anticipo")))}
 Estado: ${reserva?.estado || "Pendiente"}
 Observaciones: ${reserva?.observaciones?.trim() || "Sin observaciones"}
 Términos aceptados: Sí

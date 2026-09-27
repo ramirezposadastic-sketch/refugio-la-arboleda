@@ -12,6 +12,7 @@ import {
   sumarDias,
 } from "../lib/reservas";
 import { generarMensajeReservaWhatsApp } from "../lib/notificacionesReserva";
+import { calcularSaldo, normalizarValoresReserva, recalcularAnticipo } from "../lib/valoresReserva";
 import { formatearFechaHoraColombia, formatearFechaReserva } from "../utils/fechas";
 
 const FILTRO_TODAS = "Todas";
@@ -110,7 +111,7 @@ function AdminLogin({ onLogin }) {
 }
 
 function valorTotal(reserva) {
-  return Number(reserva.total ?? Number(reserva.anticipo || 0) * 2);
+  return Number(reserva.total || 0);
 }
 
 function valorAnticipo(reserva) {
@@ -118,11 +119,7 @@ function valorAnticipo(reserva) {
 }
 
 function valorSaldo(reserva) {
-  if (reserva.saldo_pendiente !== null && reserva.saldo_pendiente !== undefined) {
-    return Number(reserva.saldo_pendiente || 0);
-  }
-
-  return Math.max(valorTotal(reserva) - valorAnticipo(reserva), 0);
+  return calcularSaldo(valorTotal(reserva), valorAnticipo(reserva));
 }
 
 function adultosReserva(reserva) {
@@ -216,16 +213,6 @@ function aplicarCalculoAutomatico(reserva) {
     total: tarifa.total,
     anticipo: tarifa.anticipo,
     saldo_pendiente: tarifa.saldoPendiente,
-  };
-}
-function calcularValoresManualTotal(total) {
-  const totalSeguro = Math.max(0, Number(total || 0));
-  const anticipo = Math.round(totalSeguro * 0.4);
-
-  return {
-    total: totalSeguro,
-    anticipo,
-    saldo_pendiente: Math.max(totalSeguro - anticipo, 0),
   };
 }
 function limpiarNombreArchivo(nombre) {
@@ -439,6 +426,7 @@ function Admin() {
   const esAdmin = rolUsuario === ROL_ADMIN;
   const esEmpleado = rolUsuario === ROL_EMPLEADO;
   const puedeEditarTarifas = esAdmin || esEmpleado;
+  const puedeConfirmarPagos = esAdmin || esEmpleado;
 
   const validarSoloAdmin = () => {
     if (!validarAdminAutorizado()) return false;
@@ -528,9 +516,13 @@ function Admin() {
       return null;
     }
 
-    const total = Number(reservaFinal.total || 0);
-    const anticipo = Number(reservaFinal.anticipo || 0);
-    const saldo = Number(reservaFinal.saldo_pendiente ?? Math.max(total - anticipo, 0));
+    let valores;
+    try {
+      valores = normalizarValoresReserva(reservaFinal);
+    } catch (error) {
+      alert(error.message);
+      return null;
+    }
 
     return {
       ...reservaFinal,
@@ -538,15 +530,13 @@ function Admin() {
       adultos,
       ninos_menores: ninos,
       personas: adultos + ninos,
-      total,
-      anticipo,
-      saldo_pendiente: saldo,
+      ...valores,
       pago_confirmado: Boolean(reservaFinal.pago_confirmado),
     };
   };
 
   const confirmarReserva = async (reserva) => {
-    if (!validarSoloAdmin()) return;
+    if (!validarRolOperativo()) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), { estado: "Confirmada" });
     if (!reservaValidada) return;
@@ -572,7 +562,10 @@ function Admin() {
   };
 
   const confirmarPago = async (reserva) => {
-    if (!validarSoloAdmin()) return;
+    if (!validarRolOperativo()) return;
+
+    if (["rechazado", "error", "anulado", "declined", "voided"].includes(normalizarEstado(reserva.pago_estado)) &&
+      !window.confirm("Wompi registra un pago no aprobado. Confirma solo si verificaste un pago por otro medio. El estado de Wompi no se modificará. ¿Continuar?")) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), {
       estado: "Confirmada",
@@ -630,7 +623,7 @@ function Admin() {
     if (!validarRolOperativo()) return;
 
     setModoCrear(false);
-    setValoresManuales(esAdmin);
+    setValoresManuales(true);
     setReservaEditando(normalizarReservaParaEditar(reserva));
     setMostrarModal(true);
   };
@@ -789,9 +782,13 @@ function Admin() {
       return;
     }
 
-    const numero = Math.max(0, Number(valor || 0));
+    if (!["total", "anticipo"].includes(campo)) return;
+    const numero = valor === "" ? "" : Number(valor);
     setValoresManuales(true);
-    setReservaEditando((actual) => ({ ...actual, [campo]: numero }));
+    setReservaEditando((actual) => {
+      const actualizada = { ...actual, [campo]: numero };
+      return { ...actualizada, saldo_pendiente: calcularSaldo(actualizada.total, actualizada.anticipo) };
+    });
   };
 
   const recalcularValoresEstandar = () => {
@@ -800,10 +797,17 @@ function Admin() {
       return;
     }
 
+    let valores;
+    try {
+      valores = recalcularAnticipo(reservaEditando.total);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
     setValoresManuales(true);
     setReservaEditando((actual) => ({
       ...actual,
-      ...calcularValoresManualTotal(actual.total),
+      ...valores,
     }));
   };
 
@@ -1788,7 +1792,8 @@ function Admin() {
                       {r.pago_referencia && <span>Referencia: {r.pago_referencia}</span>}
                       {(r.pago_transaccion_id || r.pago_transaction_id) && <span>Transacción: {r.pago_transaccion_id || r.pago_transaction_id}</span>}
                       {r.pago_metodo && <span>Método: {r.pago_metodo}</span>}
-                      <span>Monto: ${formatoMoneda(Number(r.pago_monto || valorAnticipo(r)))}</span>
+                      <span>Valor checkout Wompi: {r.pago_monto == null ? "No registrado" : `$${formatoMoneda(r.pago_monto)}`}</span>
+                      <span>Anticipo registrado: ${formatoMoneda(valorAnticipo(r))}</span>
                       {r.pago_confirmado_en && <span>Fecha de pago: {fechaHoraLegible(r.pago_confirmado_en)}</span>}
                       {r.pago_error && <span className="pago-error">Error: {r.pago_error}</span>}
                       {r.pago_url && (
@@ -1811,8 +1816,8 @@ function Admin() {
                 </td>
                 <td>
                   <div className="acciones acciones-admin">
-                    {esAdmin && <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>}
-                    {esAdmin && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
+                    {puedeConfirmarPagos && <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>}
+                    {puedeConfirmarPagos && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
                     {esAdmin && <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>}
                     <button className="btn-editar" onClick={() => editarReserva(r)} disabled={accionEnProceso === r.id}>Editar</button>
                     <button className="btn-copiar" onClick={() => copiarResumenReserva(r)} disabled={accionEnProceso === r.id}>Copiar resumen</button>
@@ -1868,7 +1873,7 @@ function Admin() {
               <div className="modal-grid">
                 <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} disabled={!puedeEditarTarifas} /></label>
                 <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!puedeEditarTarifas} /></label>
-                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!puedeEditarTarifas} /></label>
+                <label>Saldo pendiente<input type="number" min="0" value={calcularSaldo(reservaEditando.total, reservaEditando.anticipo)} readOnly /></label>
               </div>
               <div className="acciones-valores-reserva">
                 <button type="button" className="recalcular-valores-btn" onClick={recalcularValoresEstandar} disabled={!puedeEditarTarifas}>
@@ -1877,7 +1882,7 @@ function Admin() {
                 </button>
               </div>
               <p className="nota-valores">
-                Puedes ajustar los valores manualmente. Usa "Recalcular 40%" para restaurar el cálculo estándar.
+                Puedes ajustar Total y Anticipo. El saldo se calcula automáticamente como Total menos Anticipo. Usa "Recalcular 40%" para restaurar el anticipo estándar.
               </p>
             </div>
 

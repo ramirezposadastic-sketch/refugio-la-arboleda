@@ -316,9 +316,18 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
       if (data?.errors?.length) {
         console.error("Errores reportados por la funcion de correos:", data.errors);
       }
+      if (!data?.ok || data?.logs_ok === false) {
+        console.error("Notificación incompleta; revisar los logs de enviar-correos-reserva:", {
+          message: data?.message,
+          cliente_enviado: data?.cliente_enviado,
+          equipo_enviado: data?.equipo_enviado,
+          logs_ok: data?.logs_ok,
+        });
+      }
 
       return {
         ok: Boolean(data?.ok),
+        clienteEnviado: data?.cliente_enviado ?? Boolean(data?.ok),
         configured: data?.configured !== false,
         message: data?.message || "",
       };
@@ -488,7 +497,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
         },
       });
       setMensajeExito(
-        resultadoCorreo.ok
+        resultadoCorreo.clienteEnviado
           ? "Tu solicitud fue enviada correctamente. También enviamos una copia al correo registrado."
           : "Tu solicitud fue registrada correctamente. Nuestro equipo la revisará pronto.",
       );
