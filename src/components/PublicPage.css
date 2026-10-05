@@ -136,3 +136,265 @@
 @media (max-width: 600px) {
   .public-site .logo-marca span { font-size: .9rem; }
 }
+
+/* Boutique public theme: all rules remain inside the public route wrapper. */
+.public-site {
+  --public-forest-deep: #102a20;
+  --public-forest: #214734;
+  --public-gold: #a87d32;
+  --public-gold-soft: #e3c780;
+  --public-cream: #f8f5ed;
+  --public-sand: #ede6d8;
+  --public-white: #fffcf6;
+  --public-text: #172c23;
+  --public-muted: #62685e;
+  --public-line: #c9b99466;
+  --public-serif: Georgia, "Times New Roman", serif;
+  --verde-profundo: var(--public-forest-deep);
+  --verde-natural: var(--public-forest);
+  --verde-suave: var(--public-sand);
+  --dorado: var(--public-gold);
+  --marfil: var(--public-cream);
+  --texto: var(--public-text);
+  --sombra-premium: 0 12px 30px #28362908;
+  background: var(--public-cream);
+  color: var(--public-text);
+}
+.public-site :is(.seccion-premium,.reservas,.terminos) { padding: clamp(64px,7vw,100px) clamp(20px,5vw,80px); }
+.public-site :is(.seccion-encabezado h2,.beneficios-copy h2,.reservas > h2,.terminos h2,#explora-cabana h2) {
+  font-family: var(--public-serif); font-weight: 400; font-size: clamp(2.25rem,4vw,3.75rem);
+  line-height: 1.12; letter-spacing: -.035em; text-wrap: balance;
+}
+.public-site :is(.seccion-encabezado h2,.beneficios-copy h2,.reservas > h2,.terminos h2) { color: var(--public-forest-deep); }
+.public-site .seccion-encabezado { max-width: 860px; margin-bottom: 46px; }
+.public-site .seccion-encabezado p { color: var(--public-muted); max-width: 740px; margin-inline: auto; font-size: 1.04rem; }
+.public-site :is(.section-kicker,.terminos-etiqueta) { color: #8e692b; letter-spacing: .2em; font-size: .7rem; font-weight: 650; background: transparent; }
+.public-site :is(.seccion-encabezado,.terminos-contenido) > .section-kicker::before { content: ''; display: inline-block; width: 26px; height: 1px; background: currentColor; margin-right: 12px; }
+.public-site :is(.experiencia-card h3,.cabana-detalle h3,.actividad-card-premium h3,.tarifa-card h3,.footer h3) { font-family: var(--public-serif); font-weight: 400; letter-spacing: -.02em; }
+.public-site :is(a,button,summary,input,select):focus-visible { outline: 3px solid #a87d32; outline-offset: 4px; }
+
+/* Cream navigation keeps the photography as the first strong visual. */
+.public-site .navbar { background: #fcf9f2fa; border-bottom: 1px solid var(--public-line); box-shadow: 0 2px 18px #172c2308; min-height: 82px; }
+.public-site .logo-marca span { color: var(--public-forest-deep); font-family: var(--public-serif); font-weight: 600; font-size: clamp(1.12rem,2vw,1.65rem); letter-spacing: -.035em; }
+.public-site .logo-marca img { width: 50px; height: 50px; }
+.public-site .nav-links { color: var(--public-text); }
+.public-site .nav-links a { font-size: .88rem; font-weight: 500; border-radius: 0; }
+.public-site .nav-links a:hover { color: #866120; background: transparent; box-shadow: inset 0 -2px #b18a42; }
+.public-site .nav-toggle { background: var(--public-cream); color: var(--public-forest-deep); }
+.public-site .whatsapp-float { top: 19px; background: var(--public-forest-deep); border: 1px solid var(--public-gold-soft); }
+.public-site .whatsapp-float:hover { background: var(--public-forest); }
+
+.public-site .hero-premium { min-height: min(870px,95svh); padding: 170px clamp(24px,6vw,96px) 130px; display: flex; align-items: center; background: linear-gradient(90deg,#071c13de 0%,#09211599 43%,#10251d05 85%),var(--hero-image) center 48%/cover no-repeat; }
+.public-site .hero-premium::after { height: 120px; background: linear-gradient(transparent,#0b231a55); }
+.public-site .hero-premium .hero-content { width: 100%; max-width: 1280px; margin-inline: auto; }
+.public-site .hero-premium h1 { font-family: var(--public-serif); font-size: clamp(3.8rem,7.5vw,7.25rem); font-weight: 400; line-height: .98; letter-spacing: -.055em; max-width: 800px; text-shadow: 0 4px 22px #0002; margin-block: 24px 28px; }
+.public-site .hero-premium h1 span { display: block; color: var(--public-gold-soft); }
+.public-site .hero-premium .section-kicker { color: #efd79a; letter-spacing: .19em; }
+.public-site .hero-premium .section-kicker::before { content: ''; width: 34px; height: 1px; background: currentColor; margin-right: 16px; }
+.public-site .hero-premium p { max-width: 620px; font-size: clamp(1.05rem,1.5vw,1.28rem); line-height: 1.65; }
+.public-site .hero-buttons { display: flex; flex-wrap: wrap; gap: 14px; }
+.public-site .hero-buttons a { display: inline-flex; align-items: center; justify-content: center; gap: 13px; min-height: 56px; font-size: .97rem; padding: 16px 26px; }
+.public-site .hero-premium .btn-reservar,.public-site .public-cta { background: linear-gradient(120deg,#ead08d,#d4b466); color: #172519; border: 1px solid #dabc7b; box-shadow: 0 5px 15px #51401d12; }
+.public-site .public-cta { display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 50px; padding: 13px 24px; border-radius: 6px; font-size: .94rem; font-weight: 600; text-decoration: none; transition: background 180ms,transform 180ms; }
+.public-site .public-cta:hover { background: #edd699; transform: translateY(-2px); }
+
+/* Preserve all four existing experiences in a light strip below the hero. */
+.public-site .experiencia { background: var(--public-cream); padding-top: 68px; }
+.public-site .experiencia-grid { max-width: 1280px; background: var(--public-white); border: 1px solid var(--public-line); border-radius: 12px; padding: 28px 12px; gap: 0; }
+.public-site .experiencia-card { padding: 16px 22px; border: 0; border-radius: 0; background: transparent; box-shadow: none; min-height: 0; }
+.public-site .experiencia-card + .experiencia-card { border-left: 1px solid var(--public-line); }
+.public-site .experiencia-card h3 { font-size: 1.4rem; margin: 15px 0 10px; }
+.public-site .experiencia-card p { font-size: .9rem; }
+.public-site .experiencia-card svg { color: var(--public-gold); font-size: 1.7rem; }
+
+.public-site .cabanas { background: var(--public-white); }
+.public-site .cabanas-layout { max-width: 1280px; grid-template-columns: minmax(0,1.7fr) minmax(280px,.8fr); gap: 32px; }
+.public-site .cabanas-galeria { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; }
+.public-site .cabana-imagen-card { aspect-ratio: 4/3; border-radius: 10px; border: 0; box-shadow: none; }
+.public-site .cabana-imagen-card::after { content: ''; position: absolute; inset: 45% 0 0; pointer-events: none; background: linear-gradient(transparent,#06150ee8); }
+.public-site .cabana-imagen-card h3 { z-index: 1; font-family: var(--public-serif); font-weight: 400; font-size: 1.25rem; text-align: left; left: 20px; right: 20px; bottom: 18px; border: 0; border-radius: 0; background: transparent; backdrop-filter: none; padding: 0; }
+.public-site .cabana-detalle { padding: 30px; background: var(--public-cream); border-radius: 10px; box-shadow: none; border: 1px solid var(--public-line); }
+.public-site .cabana-detalle h3 { font-size: 1.9rem; }
+.public-site .cabana-detalle li { font-size: .9rem; padding: 3px 0; }
+.public-site .cabana-detalle .public-cta { margin-top: 22px; width: 100%; box-sizing: border-box; }
+.public-site #explora-cabana { background: var(--public-forest-deep); }
+.public-site #explora-cabana h2 { color: var(--public-cream); }
+
+.public-site .tarifas { background: radial-gradient(ellipse at top left,#dcca9730,transparent 55%),var(--public-cream); }
+.public-site .tarifas-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); max-width: 1050px; gap: 30px; margin: auto; }
+.public-site .tarifa-card { width: auto; padding: 35px clamp(22px,3vw,46px); background: var(--public-white); border: 1px solid var(--public-line); border-radius: 12px; text-align: center; box-shadow: var(--sombra-premium); }
+.public-site .tarifa-card .tarifa-icon { width: 26px; height: 26px; color: var(--public-gold); margin: 0 auto 15px; }
+.public-site .tarifa-card h3 { font-size: clamp(1.6rem,2.6vw,2.15rem); min-height: 2.5em; display: grid; place-content: center; margin: 0 0 20px; line-height: 1.15; }
+.public-site .tarifa-card p { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 0; margin: 0; border-top: 1px solid var(--public-line); color: var(--public-text); font-size: 1.25rem; font-family: var(--public-serif); font-variant-numeric: tabular-nums; text-align: right; }
+.public-site .tarifa-card p strong { text-align: left; font-family: Inter,"Segoe UI",sans-serif; font-size: .92rem; font-weight: 400; }
+.public-site .tarifa-card:nth-child(2) { background: linear-gradient(135deg,#214333,#10281e); border: 1px solid #b38d41; }
+.public-site .tarifa-card:nth-child(2) h3,.public-site .tarifa-card:nth-child(2) strong { color: var(--public-cream); }
+.public-site .tarifa-card:nth-child(2) p,.public-site .tarifa-card:nth-child(2) .tarifa-icon { color: #ead18e; }
+.public-site .tarifas-pie { margin: 30px auto 0; text-align: center; }
+.public-site .tarifas-pie p { color: var(--public-muted); margin-bottom: 20px; font-size: .94rem; }
+
+.public-site .beneficios-incluidos { background: var(--public-white); }
+.public-site .beneficios-incluidos::before { background: transparent; }
+.public-site .beneficios-contenido { max-width: 1280px; gap: 42px; }
+.public-site .beneficios-copy { background: transparent; border: 0; padding: 0; box-shadow: none; }
+.public-site .beneficios-copy h2 { margin-block: 18px 24px; }
+.public-site .beneficio-item { background: transparent; border: 0; border-bottom: 1px solid var(--public-line); border-radius: 0; padding: 14px 0; }
+.public-site .beneficios-rio-oro { border: 0; border-radius: 10px; }
+.public-site .beneficios-rio-oro img { min-height: 500px; }
+.public-site .beneficios-rio-oro figcaption strong { font-family: var(--public-serif); font-weight: 400; }
+.public-site .actividades { background: var(--public-cream); }
+.public-site .actividades-grid-premium { max-width: 1280px; gap: 24px; }
+.public-site .actividad-card-premium { display: grid; grid-template-areas: 'card'; min-height: 440px; border: 0; border-radius: 10px; background: var(--public-forest-deep); overflow: hidden; }
+.public-site .actividad-card-premium > img { grid-area: card; width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; min-height: 440px; }
+.public-site .actividad-card-premium > div { grid-area: card; z-index: 1; align-self: stretch; display: flex; flex-direction: column; justify-content: flex-end; padding: 130px 25px 28px; background: linear-gradient(180deg,transparent 20%,#071a1099 52%,#071a10f5 100%); }
+.public-site .actividad-card-premium h3 { color: #fffcf4; font-size: 1.55rem; line-height: 1.18; }
+.public-site .actividad-card-premium p { color: #f0eee4; font-size: .9rem; line-height: 1.55; }
+.public-site .actividad-card-premium span { border-radius: 0; background: transparent; color: #ecd38e; font-weight: 400; font-size: .77rem; padding: 0; margin-top: 13px; }
+
+.public-site .ubicacion { text-align: left; min-height: 500px; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; background: linear-gradient(90deg,#092216e6,#092216aa 46%,#09221618),url('/imagenes/refugio/actividad-rio.jpg') center 55%/cover no-repeat; }
+.public-site .ubicacion .seccion-encabezado { margin: 0 0 25px; text-align: left; max-width: 580px; }
+.public-site .ubicacion .section-kicker { color: var(--public-gold-soft); }
+.public-site .ubicacion .seccion-encabezado h2 { color: var(--public-cream); }
+.public-site .ubicacion .seccion-encabezado p { color: #f1f0e6; font-size: 1.04rem; }
+.public-site .ubicacion a { background: #d9bb78; color: #172c23; box-shadow: none; font-weight: 600; }
+.public-site .ubicacion a:hover { background: #ecd392; }
+
+/* The existing form and summary are laid out together; no business rules change. */
+.public-site .reservas { background: var(--public-cream); }
+.public-site .reservas > h2 { margin: 0 auto 44px; text-align: center; }
+.public-site .reserva-form { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr); column-gap: 0; row-gap: 0; max-width: 1180px; padding: 0; border: 1px solid var(--public-line); background: var(--public-white); box-shadow: var(--sombra-premium); border-radius: 12px; text-align: left; }
+.public-site .reserva-datos { grid-column: 1; padding: 32px 32px 0; min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.public-site .reserva-datos-titulo { font-family: var(--public-serif); font-weight: 400; font-size: 1.6rem; color: var(--public-forest-deep); margin: 0 0 6px; }
+.public-site .reserva-contacto-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.public-site .reserva-campo { min-width: 0; display: grid; gap: 8px; }
+.public-site .reserva-campo span { font-size: .8rem; color: #4d594f; }
+.public-site .reserva-form input:not([type=checkbox]),.public-site .reserva-form select { min-width: 0; margin-bottom: 0; border: 1px solid #bfb49eaa; border-radius: 5px; background: #fffcf8; min-height: 46px; padding: 12px; font-size: 16px; }
+.public-site .reserva-form .fechas-grid { gap: 16px; }
+.public-site .reserva-form label { color: #394b3e; }
+.public-site .reserva-form .cabana-box { margin: 0; }
+.public-site .reserva-form .calendario-ayuda { color: #5e685d; font-size: .85rem; line-height: 1.6; margin: 0; }
+.public-site .reserva-form .resumen-disponibilidad { margin: 0; padding: 16px; background: #f2f1e9; border: 1px solid #d5d7c9; border-radius: 5px; font-size: .83rem; }
+.public-site .reserva-form .resumen-disponibilidad .linea-resumen { gap: 12px; }
+.public-site .reserva-form .huespedes-grid { margin: 0; gap: 16px; }
+.public-site .reserva-form .tipo-reserva-auto { margin: 0; background: transparent; border: 0; font-size: .85rem; text-align: left; padding: 0; }
+.public-site .precio-reserva { grid-column: 2; grid-row: 1 / span 2; align-self: stretch; padding: 35px 30px; margin: -1px; background: linear-gradient(150deg,#214735,#0c241a); color: #f5f0e3; border: 1px solid #bba168; border-radius: 0 12px 12px 0; box-shadow: none; font-size: .9rem; }
+.public-site .precio-reserva h2 { font-family: var(--public-serif); font-weight: 400; font-size: 1.85rem; color: var(--public-cream); text-align: left; margin: 0 0 32px; }
+.public-site .precio-reserva .linea-resumen { padding: 9px 0; margin: 0; gap: 18px; color: #f1efdf; align-items: flex-start; line-height: 1.5; }
+.public-site .precio-reserva .linea-resumen > :first-child { color: #cfceb9; }
+.public-site .precio-reserva .linea-resumen > :last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.public-site .precio-reserva hr { border: 0; height: 1px; background: #bba16840; margin-block: 18px; }
+.public-site .precio-reserva :is(.linea-total,.linea-anticipo,.linea-saldo) { gap: 15px; color: #f9f3e6; font-size: 1.05rem; line-height: 1.5; text-align: left; }
+.public-site .precio-reserva .linea-total { font-family: var(--public-serif); font-weight: 400; font-size: 1.5rem; }
+.public-site .precio-reserva .linea-anticipo { background: #dec48915; border: 1px solid #dec48977; border-radius: 5px; padding: 14px 12px; color: #f0d698; font-size: .94rem; margin-block: 24px; }
+.public-site .reserva-acciones { grid-column: 1; min-width: 0; padding: 24px 32px 32px; display: flex; flex-direction: column; gap: 18px; }
+.public-site .reserva-acciones > button { background: linear-gradient(120deg,#dfc587,#c7a255); color: #142c1e; border: 1px solid #b69043; border-radius: 6px; font-size: .98rem; min-height: 50px; margin: 0; }
+.public-site .reserva-acciones > button:hover { background: #ecd393; }
+.public-site .reserva-acciones > p { color: #66705f; text-align: center; font-size: .8rem; line-height: 1.6; margin: 0; }
+.public-site .reserva-acciones .terminos-check { margin: 0; padding: 0; border: 0; background: transparent; align-items: flex-start; }
+.public-site .reserva-acciones .terminos-check span { font-size: .8rem; line-height: 1.6; }
+.public-site .reserva-form .react-datepicker-popper { z-index: 20; }
+.public-site .reserva-form .calendario-nav-boton { background: var(--public-forest-deep); }
+
+.public-site .terminos { background: var(--public-white); }
+.public-site .terminos-contenido { max-width: 1040px; }
+.public-site .terminos-grid { display: grid; grid-template-columns: 1fr; gap: 0; border: 1px solid var(--public-line); border-radius: 10px; background: var(--public-cream); }
+.public-site .termino-card { border: 0; border-radius: 0; box-shadow: none; padding: 0; background: transparent; }
+.public-site .termino-card + .termino-card { border-top: 1px solid var(--public-line); }
+.public-site .termino-card summary { padding: 22px 26px; color: var(--public-forest-deep); font-family: var(--public-serif); font-size: 1.15rem; cursor: pointer; line-height: 1.4; }
+.public-site .termino-card summary::marker { color: #997029; }
+.public-site .termino-card[open] { background: #fffdf7; }
+.public-site .termino-card p { padding: 0 26px 24px; margin: 0; color: var(--public-muted); font-size: .95rem; line-height: 1.8; }
+.public-site .terminos-intro,.public-site .terminos-cierre { color: var(--public-muted); }
+.public-site .contacto { background: var(--public-cream); }
+.public-site .contacto-info { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; max-width: 1280px; padding: 0; background: transparent; box-shadow: none; }
+.public-site .contacto-info p { margin: 0; display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 18px; padding: 25px; min-width: 0; background: var(--public-white); border: 1px solid var(--public-line); border-radius: 8px; }
+.public-site .contacto-info svg { color: var(--public-gold); font-size: 1.8rem; }
+.public-site .contacto-info a { font-size: .86rem; line-height: 1.6; overflow-wrap: anywhere; color: var(--public-forest-deep); }
+.public-site .footer { background: radial-gradient(ellipse at top left,#31513a66,transparent 60%),var(--public-forest-deep); padding: 60px clamp(24px,6vw,96px) 28px; display: grid; grid-template-columns: minmax(0,1.5fr) minmax(0,1fr) auto; column-gap: 50px; text-align: left; }
+.public-site .footer-marca { justify-content: flex-start; margin: 0; }
+.public-site .footer-marca h3 { font-size: 1.6rem; color: var(--public-cream); }
+.public-site .footer-marca img { width: 64px; height: 64px; background: transparent; }
+.public-site .footer > p:first-of-type { grid-column: 1; font-size: .9rem; max-width: 460px; line-height: 1.7; color: #d0d4c7; }
+.public-site .footer-nav { grid-column: 2; grid-row: 1 / span 2; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-content: start; gap: 18px; padding-top: 10px; }
+.public-site .footer-nav a { font-size: .9rem; color: #ecebda; text-decoration: none; }
+.public-site .footer-nav a:hover { color: var(--public-gold-soft); }
+.public-site .footer-icons { grid-column: 3; grid-row: 1; margin: 0; align-items: center; gap: 16px; }
+.public-site .footer-icons a { color: var(--public-gold-soft); font-size: 1.35rem; }
+.public-site .footer > p:last-child { grid-column: 1 / -1; border-top: 1px solid #c4ac6740; padding-top: 24px; margin: 35px 0 0; font-size: .78rem; color: #d0d4c7; }
+
+@media (max-width:1100px) {
+  .public-site .navbar { min-height: 82px; }
+  .public-site .navbar .nav-links { background: var(--public-white); border-color: var(--public-line); }
+  .public-site .navbar .nav-links a { color: var(--public-forest-deep); }
+  .public-site .navbar .nav-links a:hover { color: #795a25; background: #eae0ca; }
+  .public-site .whatsapp-float { top: 19px; }
+  .public-site .cabanas-layout { grid-template-columns: 1fr; }
+  .public-site .cabana-detalle { position: static; }
+  .public-site .cabana-detalle ul { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .public-site .cabana-detalle .public-cta { width: auto; }
+  .public-site .experiencia-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .public-site .experiencia-card:nth-child(3) { border-left: 0; }
+  .public-site .contacto-info { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .public-site .footer { grid-template-columns: 1fr 1fr; gap: 25px; }
+  .public-site .footer-icons { grid-column: 2; grid-row: 3; justify-content: flex-start; }
+}
+@media (max-width:900px) {
+  .public-site .reserva-form { grid-template-columns: 1fr; }
+  .public-site .precio-reserva { grid-column: 1; grid-row: auto; margin: 24px 20px 0; border-radius: 10px; padding: 28px; }
+  .public-site .reserva-acciones { grid-row: auto; }
+  .public-site .beneficios-rio-oro img { min-height: 360px; }
+  .public-site .tarifas-grid { gap: 20px; }
+  .public-site .tarifa-card { padding-inline: 22px; }
+}
+@media (max-width:600px) {
+  .public-site .logo-marca span { font-size: 1.06rem; white-space: normal; line-height: 1.05; max-width: 155px; }
+  .public-site .logo-marca img { width: 40px; height: 40px; }
+  .public-site .hero-premium { min-height: 720px; padding: 160px 24px 75px; background: linear-gradient(90deg,#0a2014da,#0a20149c 70%,#0a201478),var(--hero-image) 58% center/cover no-repeat; }
+  .public-site .hero-premium h1 { font-size: clamp(3.2rem,14vw,4.6rem); max-width: 100%; line-height: 1.04; }
+  .public-site .hero-premium .section-kicker { font-size: .65rem; letter-spacing: .14em; line-height: 1.8; }
+  .public-site .hero-premium .section-kicker::before { width: 22px; margin-right: 10px; flex-shrink: 0; }
+  .public-site .hero-buttons { flex-direction: column; align-items: stretch; }
+  .public-site .hero-buttons a { width: 100%; font-size: .9rem; }
+  .public-site .experiencia-grid { padding: 8px; }
+  .public-site .experiencia-card { padding: 20px 12px; }
+  .public-site .experiencia-card h3 { font-size: 1.2rem; }
+  .public-site .experiencia-card p { font-size: .82rem; }
+  .public-site .cabanas-galeria { grid-template-columns: 1fr; }
+  .public-site .cabana-detalle { padding: 24px; }
+  .public-site .cabana-detalle ul { grid-template-columns: 1fr; }
+  .public-site .tarifas-grid { grid-template-columns: 1fr; }
+  .public-site .tarifa-card { padding: 28px 24px; }
+  .public-site .tarifa-card h3 { min-height: 0; font-size: 1.8rem; }
+  .public-site .actividades-grid-premium { grid-template-columns: 1fr; }
+  .public-site .actividad-card-premium,.public-site .actividad-card-premium > img { min-height: 400px; }
+  .public-site .ubicacion { min-height: 530px; background-position: 62% center; }
+  .public-site .reserva-datos { padding: 24px 18px 0; }
+  .public-site .reserva-contacto-grid { grid-template-columns: 1fr; }
+  .public-site .reserva-acciones { padding: 24px 18px; }
+  .public-site .precio-reserva { margin-inline: 10px; padding: 24px 18px; }
+  .public-site .precio-reserva .linea-total { font-size: 1.25rem; }
+  .public-site .reserva-form .fechas-grid { grid-template-columns: 1fr; }
+  .public-site .termino-card summary { padding: 20px 18px; font-size: 1.05rem; }
+  .public-site .termino-card p { padding-inline: 18px; }
+  .public-site .contacto-info { grid-template-columns: 1fr; }
+  .public-site .contacto-info p { flex-direction: row; align-items: center; }
+  .public-site .contacto-info svg { flex-shrink: 0; }
+  .public-site .footer { grid-template-columns: 1fr; gap: 22px; }
+  .public-site .footer-nav,.public-site .footer-icons { grid-column: 1; grid-row: auto; }
+  .public-site .footer > p:last-child { margin-top: 14px; }
+}
+/* Clear older public width limits; keep image height independent of source ratio. */
+.public-site .reserva-form { width: 100%; }
+.public-site .tarifa-card { max-width: none; }
+.public-site .actividad-card-premium { position: relative; }
+.public-site .actividad-card-premium > img { position: absolute; inset: 0; min-height: 0; }
+.public-site .actividad-card-premium > div { position: relative; min-height: 440px; }
+.public-site .precio-reserva :is(.linea-resumen,.linea-total,.linea-anticipo,.linea-saldo) { flex-direction: row; }
+@media (max-width:600px) {
+  .public-site .precio-reserva .linea-resumen { font-size: .85rem; gap: 12px; }
+  .public-site .precio-reserva :is(.linea-total,.linea-anticipo,.linea-saldo) > :last-child { white-space: nowrap; }
+  .public-site .actividad-card-premium > div { min-height: 410px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .public-site *, .public-site *::before, .public-site *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}

@@ -514,13 +514,17 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
       <h2>Reserva tu Experiencia</h2>
 
       <form className="reserva-form" onSubmit={(e) => e.preventDefault()}>
-        <input type="text" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-        <input type="text" placeholder="Numero de identificacion" value={identificacion} onChange={(e) => setIdentificacion(e.target.value)} />
-        <input type="text" placeholder="Ocupacion" value={ocupacion} onChange={(e) => setOcupacion(e.target.value)} />
-        <input type="text" placeholder="Residencia" value={residencia} onChange={(e) => setResidencia(e.target.value)} />
-        <input type="email" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} />
-        <input type="text" placeholder="Celular" value={celular} onChange={(e) => setCelular(e.target.value)} />
+        <div className="reserva-datos">
+        <h3 className="reserva-datos-titulo">Datos de la reserva</h3>
+        <div className="reserva-contacto-grid">
+        <label className="reserva-campo"><span>Nombre completo</span><input type="text" placeholder="Nombre completo" value={nombre} onChange={(e) => setNombre(e.target.value)} /></label>
+        <label className="reserva-campo"><span>Numero de identificacion</span><input type="text" placeholder="Numero de identificacion" value={identificacion} onChange={(e) => setIdentificacion(e.target.value)} /></label>
+        <label className="reserva-campo"><span>Ocupacion</span><input type="text" placeholder="Ocupacion" value={ocupacion} onChange={(e) => setOcupacion(e.target.value)} /></label>
+        <label className="reserva-campo"><span>Residencia</span><input type="text" placeholder="Residencia" value={residencia} onChange={(e) => setResidencia(e.target.value)} /></label>
+        <label className="reserva-campo"><span>Correo electronico</span><input type="email" placeholder="Correo electronico" value={correo} onChange={(e) => setCorreo(e.target.value)} /></label>
+        <label className="reserva-campo"><span>Celular</span><input type="text" placeholder="Celular" value={celular} onChange={(e) => setCelular(e.target.value)} /></label>
 
+        </div>
         <div className="cabana-box">
           <label>Selecciona tu cabaña</label>
           <select className="cabana-select" value={cabana} onChange={handleCabanaChange}>
@@ -624,6 +628,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
           Tipo de tarifa: <strong>{tarifa.tipoReserva}</strong>
         </div>
 
+        </div>
         <div className="precio-reserva">
           <h2>Resumen de Reserva</h2>
           <div className="linea-resumen"><span>Cabaña seleccionada</span><span>{cabana || "Pendiente"}</span></div>
@@ -656,6 +661,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
           <div className="linea-saldo"><span>Saldo pendiente</span><span>${formatoMoneda(tarifa.saldoPendiente)}</span></div>
         </div>
 
+        <div className="reserva-acciones">
         {tarifa.reservaLarga && (
           <div className="mensaje-error">
             Para reservas de más de 3 noches, comunícate directamente con el hotel por WhatsApp para recibir una tarifa especial.
@@ -732,6 +738,7 @@ El huésped acepta los Términos y Condiciones de Refugio La Arboleda.
         )}
 
         <p>Para confirmar la reserva se solicita un anticipo del 40%.</p>
+        </div>
       </form>
     </section>
   );

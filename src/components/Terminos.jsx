@@ -49,10 +49,10 @@ function Terminos() {
 
         <div className="terminos-grid">
           {politicas.map((politica) => (
-            <article className="termino-card" key={politica.titulo}>
-              <h3>{politica.titulo}</h3>
+            <details className="termino-card" key={politica.titulo}>
+              <summary>{politica.titulo}</summary>
               <p>{politica.texto}</p>
-            </article>
+            </details>
           ))}
         </div>
 

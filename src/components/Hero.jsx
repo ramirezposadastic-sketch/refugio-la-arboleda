@@ -1,4 +1,4 @@
-import { FaWhatsapp } from "react-icons/fa";
+import { FaWhatsapp, FaArrowRight, FaRegCalendarAlt } from "react-icons/fa";
 import { imagenesRefugio } from "../data/imagenesRefugio";
 
 function Hero({ fotosDinamicas }) {
@@ -18,7 +18,7 @@ function Hero({ fotosDinamicas }) {
     >
       <div className="hero-content">
         <span className="section-kicker">Cabañas privadas en la naturaleza</span>
-        <h1>Refugio La Arboleda</h1>
+        <h1>Refugio <span>La Arboleda</span></h1>
         <p>
           Cabañas privadas junto a la naturaleza, con desayuno, tubing por el río y caminatas
           ecológicas incluidas.
@@ -26,7 +26,9 @@ function Hero({ fotosDinamicas }) {
 
         <div className="hero-buttons">
           <a href="#reservas" className="btn-reservar">
+            <FaRegCalendarAlt aria-hidden="true" />
             Reservar ahora
+            <FaArrowRight aria-hidden="true" />
           </a>
 
           <a

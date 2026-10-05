@@ -59,6 +59,7 @@ function Cabanas({ fotosDinamicas }) {
               </li>
             ))}
           </ul>
+          <a className="public-cta" href="#reservas">Consultar disponibilidad</a>
         </div>
       </div>
     </section>

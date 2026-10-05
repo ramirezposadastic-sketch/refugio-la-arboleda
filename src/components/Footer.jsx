@@ -17,6 +17,15 @@ function Footer() {
         Un refugio natural diseñado para desconectarte de la rutina y reconectar con la naturaleza.
       </p>
 
+      <nav className="footer-nav" aria-label="Navegación al pie">
+        <a href="#inicio">Inicio</a>
+        <a href="#cabanas">Cabañas</a>
+        <a href="#explora-cabana">Explorar</a>
+        <a href="#ubicacion">Ubicación</a>
+        <a href="#reservas">Reservas</a>
+        <a href="#contacto">Contacto</a>
+      </nav>
+
       <div className="footer-icons">
         <a
           href="https://wa.me/573136303649"
