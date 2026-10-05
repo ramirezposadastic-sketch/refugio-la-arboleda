@@ -10,7 +10,7 @@ function Tarifas() {
       <div className="tarifas-grid">
         <div className="tarifa-card">
           <h3>Entre semana</h3>
-          <p><strong>Pareja:</strong> $420.000</p>
+          <p><strong>Pareja:</strong> $440.000</p>
           <p><strong>Persona sola:</strong> $300.000</p>
           <p><strong>Persona adicional:</strong> $180.000</p>
           <p><strong>Menor de 8 años:</strong> $130.000</p>

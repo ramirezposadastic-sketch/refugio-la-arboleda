@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../supabase";
 import {
   CABANAS,
@@ -9,8 +9,10 @@ import {
   normalizarCabana,
   normalizarEstado,
   rangoDisponible,
+  sumarDias,
 } from "../lib/reservas";
 import { generarMensajeReservaWhatsApp } from "../lib/notificacionesReserva";
+import { calcularSaldo, normalizarValoresReserva, recalcularAnticipo } from "../lib/valoresReserva";
 import { formatearFechaHoraColombia, formatearFechaReserva } from "../utils/fechas";
 
 const FILTRO_TODAS = "Todas";
@@ -109,7 +111,7 @@ function AdminLogin({ onLogin }) {
 }
 
 function valorTotal(reserva) {
-  return Number(reserva.total ?? Number(reserva.anticipo || 0) * 2);
+  return Number(reserva.total || 0);
 }
 
 function valorAnticipo(reserva) {
@@ -117,11 +119,7 @@ function valorAnticipo(reserva) {
 }
 
 function valorSaldo(reserva) {
-  if (reserva.saldo_pendiente !== null && reserva.saldo_pendiente !== undefined) {
-    return Number(reserva.saldo_pendiente || 0);
-  }
-
-  return Math.max(valorTotal(reserva) - valorAnticipo(reserva), 0);
+  return calcularSaldo(valorTotal(reserva), valorAnticipo(reserva));
 }
 
 function adultosReserva(reserva) {
@@ -217,7 +215,6 @@ function aplicarCalculoAutomatico(reserva) {
     saldo_pendiente: tarifa.saldoPendiente,
   };
 }
-
 function limpiarNombreArchivo(nombre) {
   const extension = nombre.includes(".") ? nombre.split(".").pop() : "jpg";
   const base = nombre
@@ -251,6 +248,10 @@ function Admin() {
   const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
   const [filtroPago, setFiltroPago] = useState(FILTRO_TODOS);
   const [filtroFecha, setFiltroFecha] = useState(FILTRO_TODOS);
+  const reservasScrollRef = useRef(null);
+  const [puedeMoverIzquierda, setPuedeMoverIzquierda] = useState(false);
+  const [puedeMoverDerecha, setPuedeMoverDerecha] = useState(false);
+  const [mostrarControlesTabla, setMostrarControlesTabla] = useState(false);
   const [reservas, setReservas] = useState([]);
   const [reservasEliminadas, setReservasEliminadas] = useState([]);
   const [mostrarHistorialEliminadas, setMostrarHistorialEliminadas] = useState(false);
@@ -265,6 +266,12 @@ function Admin() {
   const [archivoFoto, setArchivoFoto] = useState(null);
   const [cargandoFotos, setCargandoFotos] = useState(false);
   const [errorFotos, setErrorFotos] = useState("");
+  const [mesCalendarioAdmin, setMesCalendarioAdmin] = useState(() => {
+    const hoy = new Date();
+    return { year: hoy.getFullYear(), month: hoy.getMonth() };
+  });
+  const [filtroCabanaCalendario, setFiltroCabanaCalendario] = useState(FILTRO_TODAS);
+  const [fechaSeleccionadaCalendario, setFechaSeleccionadaCalendario] = useState(() => fechaToISO(new Date()));
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data, error }) => {
@@ -418,6 +425,8 @@ function Admin() {
 
   const esAdmin = rolUsuario === ROL_ADMIN;
   const esEmpleado = rolUsuario === ROL_EMPLEADO;
+  const puedeEditarTarifas = esAdmin || esEmpleado;
+  const puedeConfirmarPagos = esAdmin || esEmpleado;
 
   const validarSoloAdmin = () => {
     if (!validarAdminAutorizado()) return false;
@@ -507,9 +516,13 @@ function Admin() {
       return null;
     }
 
-    const total = Number(reservaFinal.total || 0);
-    const anticipo = Number(reservaFinal.anticipo || 0);
-    const saldo = Number(reservaFinal.saldo_pendiente ?? Math.max(total - anticipo, 0));
+    let valores;
+    try {
+      valores = normalizarValoresReserva(reservaFinal);
+    } catch (error) {
+      alert(error.message);
+      return null;
+    }
 
     return {
       ...reservaFinal,
@@ -517,15 +530,13 @@ function Admin() {
       adultos,
       ninos_menores: ninos,
       personas: adultos + ninos,
-      total,
-      anticipo,
-      saldo_pendiente: saldo,
+      ...valores,
       pago_confirmado: Boolean(reservaFinal.pago_confirmado),
     };
   };
 
   const confirmarReserva = async (reserva) => {
-    if (!validarSoloAdmin()) return;
+    if (!validarRolOperativo()) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), { estado: "Confirmada" });
     if (!reservaValidada) return;
@@ -551,7 +562,10 @@ function Admin() {
   };
 
   const confirmarPago = async (reserva) => {
-    if (!validarSoloAdmin()) return;
+    if (!validarRolOperativo()) return;
+
+    if (["rechazado", "error", "anulado", "declined", "voided"].includes(normalizarEstado(reserva.pago_estado)) &&
+      !window.confirm("Wompi registra un pago no aprobado. Confirma solo si verificaste un pago por otro medio. El estado de Wompi no se modificará. ¿Continuar?")) return;
 
     const reservaValidada = validarReserva(normalizarReservaParaEditar(reserva), {
       estado: "Confirmada",
@@ -609,7 +623,7 @@ function Admin() {
     if (!validarRolOperativo()) return;
 
     setModoCrear(false);
-    setValoresManuales(esAdmin);
+    setValoresManuales(true);
     setReservaEditando(normalizarReservaParaEditar(reserva));
     setMostrarModal(true);
   };
@@ -763,20 +777,38 @@ function Admin() {
   };
 
   const actualizarImporte = (campo, valor) => {
-    if (!esAdmin) {
+    if (!puedeEditarTarifas) {
       alert(MENSAJE_SIN_PERMISOS);
       return;
     }
 
-    const numero = Number(valor || 0);
+    if (!["total", "anticipo"].includes(campo)) return;
+    const numero = valor === "" ? "" : Number(valor);
     setValoresManuales(true);
     setReservaEditando((actual) => {
-      const nuevo = { ...actual, [campo]: numero };
-      if (campo === "total" || campo === "anticipo") {
-        nuevo.saldo_pendiente = Math.max(Number(nuevo.total || 0) - Number(nuevo.anticipo || 0), 0);
-      }
-      return nuevo;
+      const actualizada = { ...actual, [campo]: numero };
+      return { ...actualizada, saldo_pendiente: calcularSaldo(actualizada.total, actualizada.anticipo) };
     });
+  };
+
+  const recalcularValoresEstandar = () => {
+    if (!puedeEditarTarifas) {
+      alert(MENSAJE_SIN_PERMISOS);
+      return;
+    }
+
+    let valores;
+    try {
+      valores = recalcularAnticipo(reservaEditando.total);
+    } catch (error) {
+      alert(error.message);
+      return;
+    }
+    setValoresManuales(true);
+    setReservaEditando((actual) => ({
+      ...actual,
+      ...valores,
+    }));
   };
 
   const subirFotoSitio = async (event) => {
@@ -926,6 +958,49 @@ function Admin() {
     });
   }, [reservas, busqueda, filtroEstado, filtroCabana, filtroPago, filtroFecha]);
 
+  const actualizarEstadoScrollReservas = useCallback(() => {
+    const contenedor = reservasScrollRef.current;
+    const tolerancia = 4;
+
+    if (!contenedor) {
+      setPuedeMoverIzquierda(false);
+      setPuedeMoverDerecha(false);
+      setMostrarControlesTabla(false);
+      return;
+    }
+
+    const tieneDesbordamiento = contenedor.scrollWidth - contenedor.clientWidth > tolerancia;
+    setMostrarControlesTabla(tieneDesbordamiento);
+    setPuedeMoverIzquierda(tieneDesbordamiento && contenedor.scrollLeft > tolerancia);
+    setPuedeMoverDerecha(
+      tieneDesbordamiento &&
+        contenedor.scrollLeft + contenedor.clientWidth < contenedor.scrollWidth - tolerancia,
+    );
+  }, []);
+
+  const moverTablaReservas = (cantidad) => {
+    reservasScrollRef.current?.scrollBy({
+      left: cantidad,
+      behavior: "smooth",
+    });
+
+    window.setTimeout(actualizarEstadoScrollReservas, 360);
+  };
+
+  useEffect(() => {
+    const contenedor = reservasScrollRef.current;
+    const actualizar = () => actualizarEstadoScrollReservas();
+    const frame = window.requestAnimationFrame(actualizar);
+
+    contenedor?.addEventListener("scroll", actualizar, { passive: true });
+    window.addEventListener("resize", actualizar);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      contenedor?.removeEventListener("scroll", actualizar);
+      window.removeEventListener("resize", actualizar);
+    };
+  }, [actualizarEstadoScrollReservas, reservasFiltradas.length]);
   const reportes = useMemo(() => {
     const hoy = new Date();
     const mesActual = hoy.getMonth();
@@ -956,6 +1031,128 @@ function Admin() {
     return { ingresosMes, saldosPendientes, porMes, porCabana };
   }, [reservas]);
 
+  const fechaISOCalendario = (year, month, day) => {
+    const mes = String(month + 1).padStart(2, "0");
+    const dia = String(day).padStart(2, "0");
+    return `${year}-${mes}-${dia}`;
+  };
+
+  const nombreMesCalendario = (year, month) =>
+    new Date(year, month, 1).toLocaleDateString("es-CO", {
+      month: "long",
+      year: "numeric",
+    });
+
+  const reservaBloqueaCalendario = (reserva) =>
+    ["pendiente", "confirmada"].includes(normalizarEstado(reserva?.estado));
+
+  const reservaOcupaFechaCalendario = (reserva, fechaISO) => {
+    if (!reservaBloqueaCalendario(reserva)) return false;
+    const ingreso = fechaToISO(reserva.fecha_ingreso);
+    const salida = fechaToISO(reserva.fecha_salida);
+    if (!ingreso || !salida) return false;
+    return fechaISO >= ingreso && fechaISO < salida;
+  };
+
+  const reservasDeCabanaEnFecha = (fechaISO, cabana) =>
+    reservas.filter(
+      (reserva) =>
+        normalizarCabana(reserva.cabana) === cabana &&
+        reservaOcupaFechaCalendario(reserva, fechaISO),
+    );
+
+  const obtenerDetalleDiaCalendario = (fechaISO) => {
+    const cabanas = CABANAS.map((cabana) => {
+      const reservasCabana = reservasDeCabanaEnFecha(fechaISO, cabana);
+      return {
+        cabana,
+        ocupada: reservasCabana.length > 0,
+        reserva: reservasCabana[0] || null,
+      };
+    });
+    const cabanasFiltradas =
+      filtroCabanaCalendario === FILTRO_TODAS
+        ? cabanas
+        : cabanas.filter((item) => item.cabana === filtroCabanaCalendario);
+    const libres = cabanasFiltradas.filter((item) => !item.ocupada).length;
+    const total = cabanasFiltradas.length || CABANAS.length;
+    const estado = libres === total ? "disponible" : libres === 0 ? "ocupado" : "parcial";
+
+    return {
+      fechaISO,
+      cabanas,
+      cabanasFiltradas,
+      libres,
+      total,
+      estado,
+    };
+  };
+
+  const diasCalendarioAdmin = (() => {
+    const { year, month } = mesCalendarioAdmin;
+    const primerDia = new Date(year, month, 1);
+    const diasDelMes = new Date(year, month + 1, 0).getDate();
+    const offsetLunes = (primerDia.getDay() + 6) % 7;
+    const dias = [];
+
+    for (let i = 0; i < offsetLunes; i += 1) {
+      dias.push({ fueraMes: true, key: `vacio-inicio-${i}` });
+    }
+
+    for (let day = 1; day <= diasDelMes; day += 1) {
+      const fechaISO = fechaISOCalendario(year, month, day);
+      dias.push({
+        key: fechaISO,
+        day,
+        fechaISO,
+        fueraMes: false,
+        ...obtenerDetalleDiaCalendario(fechaISO),
+      });
+    }
+
+    while (dias.length % 7 !== 0) {
+      dias.push({ fueraMes: true, key: `vacio-fin-${dias.length}` });
+    }
+
+    return dias;
+  })();
+
+  const detalleDiaSeleccionado = obtenerDetalleDiaCalendario(fechaSeleccionadaCalendario);
+
+  const cambiarMesCalendario = (delta) => {
+    setMesCalendarioAdmin((actual) => {
+      const fecha = new Date(actual.year, actual.month + delta, 1);
+      return { year: fecha.getFullYear(), month: fecha.getMonth() };
+    });
+  };
+
+  const volverMesActualCalendario = () => {
+    const hoy = new Date();
+    setMesCalendarioAdmin({ year: hoy.getFullYear(), month: hoy.getMonth() });
+    setFechaSeleccionadaCalendario(fechaToISO(hoy));
+  };
+
+  const abrirNuevaReservaDesdeCalendario = () => {
+    if (!validarRolOperativo()) return;
+
+    const salida = fechaToISO(sumarDias(new Date(`${fechaSeleccionadaCalendario}T00:00:00`), 1));
+    const cabanaSugerida =
+      filtroCabanaCalendario !== FILTRO_TODAS
+        ? filtroCabanaCalendario
+        : detalleDiaSeleccionado.cabanasFiltradas.find((item) => !item.ocupada)?.cabana || CABANAS[0];
+
+    setModoCrear(true);
+    setValoresManuales(false);
+    setReservaEditando(
+      aplicarCalculoAutomatico({
+        ...crearReservaVacia(),
+        fecha_ingreso: fechaSeleccionadaCalendario,
+        fecha_salida: salida,
+        cabana: cabanaSugerida,
+      }),
+    );
+    setMostrarModal(true);
+  };
   const exportarCsv = () => {
     if (!validarSoloAdmin()) return;
 
@@ -1044,13 +1241,36 @@ function Admin() {
     }
   };
 
+  const claseEstadoPagoWompi = (estado) => {
+    const estadoNormalizado = normalizarEstado(estado);
+    if (["aprobado", "approved", "pagado"].includes(estadoNormalizado)) return "pago-ok";
+    if (["rechazado", "declined", "error", "voided"].includes(estadoNormalizado)) return "pago-error";
+    return "pago-pendiente";
+  };
+
+  const etiquetaEstadoPagoWompi = (estado) => {
+    const estadoNormalizado = normalizarEstado(estado || "pendiente");
+    if (estadoNormalizado === "link_generado") return "Link generado";
+    if (estadoNormalizado === "aprobado" || estadoNormalizado === "approved") return "Pago aprobado por Wompi";
+    if (estadoNormalizado === "rechazado" || estadoNormalizado === "declined") return "Rechazado";
+    if (estadoNormalizado === "error") return "Error";
+    return estado || "Pendiente";
+  };
+
   const tieneDatosPago = (reserva) =>
     Boolean(
       reserva?.pago_proveedor ||
       reserva?.pago_estado ||
       reserva?.pago_referencia ||
       reserva?.pago_url ||
-      reserva?.pago_monto,
+      reserva?.pago_monto ||
+      reserva?.pago_transaccion_id ||
+      reserva?.pago_transaction_id ||
+      reserva?.pago_metodo ||
+      reserva?.pago_confirmado_en ||
+      reserva?.pago_evento_raw ||
+      reserva?.pago_raw ||
+      reserva?.pago_error,
     );
 
   const pendientes = reservas.filter((r) => normalizarEstado(r.estado) === "pendiente").length;
@@ -1174,15 +1394,17 @@ function Admin() {
           </div>
         </section>
 
-        <section className="admin-metricas-bloque">
-          <h3>Resumen financiero</h3>
-          <div className="admin-stats admin-stats-profesional">
-            <div className="stat-card ventas"><h3>${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
-            <div className="stat-card anticipos"><h3>${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
-            <div className="stat-card saldos"><h3>${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
-            <div className="stat-card ingresos"><h3>${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
-          </div>
-        </section>
+        {esAdmin && (
+          <section className="admin-metricas-bloque resumen-financiero-admin">
+            <h3>Resumen financiero</h3>
+            <div className="admin-stats admin-stats-profesional resumen-financiero-grid">
+              <div className="stat-card ventas"><h3 className="valor-financiero">${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
+              <div className="stat-card anticipos"><h3 className="valor-financiero">${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
+              <div className="stat-card saldos"><h3 className="valor-financiero">${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
+              <div className="stat-card ingresos"><h3 className="valor-financiero">${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
+            </div>
+          </section>
+        )}
       </div>
 
       <div className="admin-reportes">
@@ -1200,6 +1422,91 @@ function Admin() {
         </div>
       </div>
 
+      <section className="admin-calendario-disponibilidad">
+        <div className="admin-calendario-header">
+          <div>
+            <span className="admin-calendario-kicker">Calendario</span>
+            <h3>Calendario de disponibilidad</h3>
+            <p>Consulta rápidamente qué fechas están ocupadas o disponibles por cabaña.</p>
+          </div>
+          <div className="admin-calendario-controles">
+            <button type="button" onClick={() => cambiarMesCalendario(-1)}>Anterior</button>
+            <strong>{nombreMesCalendario(mesCalendarioAdmin.year, mesCalendarioAdmin.month)}</strong>
+            <button type="button" onClick={() => cambiarMesCalendario(1)}>Siguiente</button>
+            <button type="button" onClick={volverMesActualCalendario}>Hoy</button>
+          </div>
+        </div>
+
+        <div className="admin-calendario-toolbar">
+          <div className="admin-calendario-leyenda" aria-label="Leyenda de disponibilidad">
+            <span><i className="cal-dot disponible" />Disponible</span>
+            <span><i className="cal-dot parcial" />Parcial</span>
+            <span><i className="cal-dot ocupado" />Ocupado</span>
+          </div>
+          <label className="admin-calendario-filtro">
+            Cabaña
+            <select value={filtroCabanaCalendario} onChange={(event) => setFiltroCabanaCalendario(event.target.value)}>
+              <option>{FILTRO_TODAS}</option>
+              {CABANAS.map((cabanaItem) => <option key={cabanaItem}>{cabanaItem}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="admin-calendario-layout">
+          <div className="admin-calendario-grid" aria-label="Calendario de disponibilidad mensual">
+            {["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"].map((dia) => (
+              <div className="admin-calendario-dia-nombre" key={dia}>{dia}</div>
+            ))}
+            {diasCalendarioAdmin.map((dia) => (
+              dia.fueraMes ? (
+                <div className="admin-calendario-dia fuera-mes" key={dia.key} aria-hidden="true" />
+              ) : (
+                <button
+                  type="button"
+                  key={dia.key}
+                  className={`admin-calendario-dia ${dia.estado} ${dia.fechaISO === fechaSeleccionadaCalendario ? "seleccionado" : ""} ${dia.fechaISO === fechaToISO(new Date()) ? "hoy" : ""}`}
+                  onClick={() => setFechaSeleccionadaCalendario(dia.fechaISO)}
+                  title={dia.cabanasFiltradas.map((item) => `${item.cabana}: ${item.ocupada ? "Ocupada" : "Disponible"}`).join(" | ")}
+                >
+                  <span className="admin-calendario-numero">{dia.day}</span>
+                  <span className="admin-calendario-estado">{dia.estado === "disponible" ? "Disponible" : dia.estado === "parcial" ? "Parcial" : "Ocupado"}</span>
+                  <strong>{dia.libres}/{dia.total} libres</strong>
+                </button>
+              )
+            ))}
+          </div>
+
+          <aside className="admin-calendario-detalle">
+            <span className={`admin-calendario-badge ${detalleDiaSeleccionado.estado}`}>
+              {detalleDiaSeleccionado.estado === "disponible" ? "Disponible" : detalleDiaSeleccionado.estado === "parcial" ? "Parcial" : "Ocupado"}
+            </span>
+            <h4>Disponibilidad del {fechaLegible(fechaSeleccionadaCalendario)}</h4>
+            <p>{detalleDiaSeleccionado.libres}/{detalleDiaSeleccionado.total} cabañas libres para nueva reserva.</p>
+            <div className="admin-calendario-cabanas">
+              {detalleDiaSeleccionado.cabanasFiltradas.map((item) => (
+                <article className={item.ocupada ? "cabana-dia ocupada" : "cabana-dia disponible"} key={item.cabana}>
+                  <strong>{item.cabana}</strong>
+                  {item.ocupada ? (
+                    <div>
+                      <span>Ocupada por: {item.reserva?.nombre || "Cliente sin nombre"}</span>
+                      <small>Ingreso: {fechaLegible(item.reserva?.fecha_ingreso)}</small>
+                      <small>Salida: {fechaLegible(item.reserva?.fecha_salida)}</small>
+                      <small>Estado: {item.reserva?.estado || "Pendiente"}</small>
+                      <small>Pago: {item.reserva?.pago_confirmado ? "Confirmado" : etiquetaEstadoPagoWompi(item.reserva?.pago_estado)}</small>
+                      <small>Observaciones: {item.reserva?.observaciones?.trim() || "Sin observaciones"}</small>
+                    </div>
+                  ) : (
+                    <span>Disponible para nueva reserva</span>
+                  )}
+                </article>
+              ))}
+            </div>
+            <button type="button" className="btn-nueva-reserva" onClick={abrirNuevaReservaDesdeCalendario}>
+              Crear reserva para esta fecha
+            </button>
+          </aside>
+        </div>
+      </section>
       {esAdmin && mostrarGestionFotos && (
         <section className="admin-fotos">
           <div className="admin-fotos-header">
@@ -1377,11 +1684,35 @@ function Admin() {
         </div>
       )}
 
-      <div className="admin-toolbar">
+      <div className="admin-toolbar admin-toolbar-reservas">
         <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
-        <span>{reservasFiltradas.length} reservas visibles</span>
+        <div className="admin-toolbar-reservas-info">
+          <span>{reservasFiltradas.length} reservas visibles</span>
+          {mostrarControlesTabla && (
+            <div className="reservas-scroll-toolbar" aria-label="Controles de desplazamiento horizontal de reservas">
+              <span className="reservas-scroll-label">Desplazar tabla</span>
+              <button
+                type="button"
+                className="reservas-scroll-button"
+                onClick={() => moverTablaReservas(-500)}
+                disabled={!puedeMoverIzquierda}
+                aria-label="Mover tabla hacia la izquierda"
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="reservas-scroll-button"
+                onClick={() => moverTablaReservas(500)}
+                disabled={!puedeMoverDerecha}
+                aria-label="Mover tabla hacia la derecha"
+              >
+                →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-
       <div className="admin-filtros admin-filtros-profesional">
         <input type="text" placeholder="Buscar por nombre o celular..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
         <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
@@ -1405,7 +1736,7 @@ function Admin() {
         </select>
       </div>
 
-      <div className="admin-tabla-wrapper">
+      <div className="admin-tabla-wrapper reservas-table-scroll" ref={reservasScrollRef}>
         <table>
           <thead>
             <tr>
@@ -1423,6 +1754,7 @@ function Admin() {
               <th>Saldo</th>
               <th>Estado</th>
               <th>Pago</th>
+              <th>Observaciones</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -1452,23 +1784,40 @@ function Admin() {
                     {r.pago_confirmado ? "Confirmado" : "Pendiente"}
                   </span>
                   {tieneDatosPago(r) && (
-                    <div className="pago-admin-detalle">
-                      <span>Proveedor: {r.pago_proveedor || "Bold"}</span>
-                      <span>Estado: {r.pago_estado || "pendiente"}</span>
-                      {r.pago_referencia && <span>Ref: {r.pago_referencia}</span>}
-                      <span>Monto: ${formatoMoneda(Number(r.pago_monto || valorAnticipo(r)))}</span>
+                    <div className="pago-admin-detalle pago-wompi-detalle">
+                      <span>Proveedor: {r.pago_proveedor || "Wompi"}</span>
+                      <span className={claseEstadoPagoWompi(r.pago_estado)}>
+                        Estado Wompi: {etiquetaEstadoPagoWompi(r.pago_estado)}
+                      </span>
+                      {r.pago_referencia && <span>Referencia: {r.pago_referencia}</span>}
+                      {(r.pago_transaccion_id || r.pago_transaction_id) && <span>Transacción: {r.pago_transaccion_id || r.pago_transaction_id}</span>}
+                      {r.pago_metodo && <span>Método: {r.pago_metodo}</span>}
+                      <span>Valor checkout Wompi: {r.pago_monto == null ? "No registrado" : `$${formatoMoneda(r.pago_monto)}`}</span>
+                      <span>Anticipo registrado: ${formatoMoneda(valorAnticipo(r))}</span>
+                      {r.pago_confirmado_en && <span>Fecha de pago: {fechaHoraLegible(r.pago_confirmado_en)}</span>}
+                      {r.pago_error && <span className="pago-error">Error: {r.pago_error}</span>}
                       {r.pago_url && (
                         <button type="button" className="btn-link-pago" onClick={() => copiarLinkPago(r)}>
-                          Copiar link de pago
+                          Copiar checkout
                         </button>
                       )}
                     </div>
                   )}
                 </td>
                 <td>
+                  {r.observaciones?.trim() ? (
+                    <div className="observaciones-reserva-admin">
+                      <strong>Observaciones</strong>
+                      <p>{r.observaciones}</p>
+                    </div>
+                  ) : (
+                    <span className="observaciones-vacias-admin">Sin observaciones</span>
+                  )}
+                </td>
+                <td>
                   <div className="acciones acciones-admin">
-                    {esAdmin && <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>}
-                    {esAdmin && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
+                    {puedeConfirmarPagos && <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>}
+                    {puedeConfirmarPagos && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
                     {esAdmin && <button className="btn-cancelar" onClick={() => cancelarReserva(r.id)} disabled={accionEnProceso === r.id}>Cancelar</button>}
                     <button className="btn-editar" onClick={() => editarReserva(r)} disabled={accionEnProceso === r.id}>Editar</button>
                     <button className="btn-copiar" onClick={() => copiarResumenReserva(r)} disabled={accionEnProceso === r.id}>Copiar resumen</button>
@@ -1522,20 +1871,31 @@ function Admin() {
             <div className="modal-seccion">
               <h3>Valores</h3>
               <div className="modal-grid">
-                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} disabled={!esAdmin} /></label>
-                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!esAdmin} /></label>
-                <label>Saldo pendiente<input type="number" min="0" value={reservaEditando.saldo_pendiente || 0} onChange={(e) => actualizarImporte("saldo_pendiente", e.target.value)} disabled={!esAdmin} /></label>
+                <label>Total<input type="number" min="0" value={reservaEditando.total || 0} onChange={(e) => actualizarImporte("total", e.target.value)} disabled={!puedeEditarTarifas} /></label>
+                <label>Anticipo<input type="number" min="0" value={reservaEditando.anticipo || 0} onChange={(e) => actualizarImporte("anticipo", e.target.value)} disabled={!puedeEditarTarifas} /></label>
+                <label>Saldo pendiente<input type="number" min="0" value={calcularSaldo(reservaEditando.total, reservaEditando.anticipo)} readOnly /></label>
+              </div>
+              <div className="acciones-valores-reserva">
+                <button type="button" className="recalcular-valores-btn" onClick={recalcularValoresEstandar} disabled={!puedeEditarTarifas}>
+                  <span aria-hidden="true">↻</span>
+                  Recalcular 40%
+                </button>
               </div>
               <p className="nota-valores">
-                {valoresManuales
-                  ? "Valores manuales activos."
-                  : esAdmin
-                    ? "Los valores se recalculan automaticamente con fechas y huespedes."
-                    : "Empleado: los valores se recalculan automaticamente y no se pueden editar manualmente."}
+                Puedes ajustar Total y Anticipo. El saldo se calcula automáticamente como Total menos Anticipo. Usa "Recalcular 40%" para restaurar el anticipo estándar.
               </p>
             </div>
 
-            <textarea placeholder="Observaciones" value={reservaEditando.observaciones || ""} onChange={(e) => setReservaEditando({ ...reservaEditando, observaciones: e.target.value })} />
+            <label className="observaciones-modal-admin" htmlFor="observaciones-reserva-admin">
+              Observaciones
+              <textarea
+                id="observaciones-reserva-admin"
+                name="observaciones"
+                placeholder="Ej. decoración especial, alergias, hora estimada de llegada..."
+                value={reservaEditando.observaciones || ""}
+                onChange={(e) => setReservaEditando({ ...reservaEditando, observaciones: e.target.value })}
+              />
+            </label>
 
             <label className="check-pago">
               <input type="checkbox" checked={reservaEditando.pago_confirmado || false} onChange={(e) => actualizarCampoReserva("pago_confirmado", e.target.checked)} disabled={!esAdmin} />
@@ -1556,4 +1916,5 @@ function Admin() {
 }
 
 export default Admin;
+
 

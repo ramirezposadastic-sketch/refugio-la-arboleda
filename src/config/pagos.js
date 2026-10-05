@@ -1,11 +1,10 @@
 export const pagosConfig = {
-  proveedor: "bold",
-  boldActivo: false,
-  modo: "preparado",
-  requiereConfiguracion: true,
-  linkManualBold: "",
+  proveedorActivo: "wompi",
+  modoPago: "wompi_checkout",
+  pseActivo: true,
+  pagoManualFallback: true,
   mensajePagoNoDisponible:
-    "El pago en línea todavía no está disponible. Para pagar el anticipo, comunícate por WhatsApp con Refugio La Arboleda.",
+    "No pudimos preparar el pago en línea. Puedes comunicarte por WhatsApp para recibir ayuda con el anticipo.",
   mensajePagoPreparado:
-    "El sistema está preparado para pagos con Bold. Falta configurar las llaves o el link oficial del comercio.",
+    "Pago seguro preparado con Wompi/PSE. La confirmación real llega por webhook cuando Wompi aprueba la transacción.",
 };

@@ -9,6 +9,11 @@ const corsHeaders = {
 type Reserva = Record<string, any>;
 
 type LogEstado = "enviado" | "error" | "pendiente";
+type TipoCorreo = "equipo_nueva_reserva" | "cliente_reserva";
+
+const escaparHtml = (valor: unknown) => String(valor ?? "").replace(/[&<>"']/g, (caracter) => ({
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+}[caracter]!));
 
 const moneda = (valor: unknown) =>
   new Intl.NumberFormat("es-CO", {
@@ -24,7 +29,7 @@ const fecha = (valor: unknown) => {
   return dia.padStart(2, "0") + "/" + mes.padStart(2, "0") + "/" + anio;
 };
 
-function formatearFechaColombia(fecha: unknown) {
+function formatearFechaColombia(fecha: unknown, incluirHora = false) {
   if (!fecha) return "No disponible";
 
   const date = new Date(String(fecha));
@@ -38,6 +43,7 @@ function formatearFechaColombia(fecha: unknown) {
     year: "numeric",
     month: "numeric",
     day: "numeric",
+    ...(incluirHora ? { hour: "numeric", minute: "2-digit", hour12: true } as const : {}),
   }).format(date);
 }
 
@@ -69,14 +75,17 @@ const htmlBase = (titulo: string, contenido: string) => `
   </div>
 `;
 
-const resumenReserva = (reserva: Reserva) => {
+const resumenReserva = (original: Reserva, interno = false) => {
+  const reserva = Object.fromEntries(Object.entries(original).map(([campo, valor]) =>
+    [campo, typeof valor === "string" ? escaparHtml(valor) : valor]));
   const total = Number(reserva.total || 0);
   const anticipo = Number(reserva.anticipo || 0);
-  const saldo = Number(reserva.saldo_pendiente ?? Math.max(total - anticipo, 0));
+  const saldo = Math.max(total - anticipo, 0);
   const totalNoches = noches(reserva.fecha_ingreso, reserva.fecha_salida);
 
   return `
     <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+      <tr><td style="padding:8px;border-bottom:1px solid #eee;">ID / referencia</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.id || "-"}</td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Cliente</td><td style="padding:8px;border-bottom:1px solid #eee;"><strong>${reserva.nombre || "-"}</strong></td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Teléfono</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.celular || "-"}</td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Correo</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.correo || "No registrado"}</td></tr>
@@ -87,10 +96,12 @@ const resumenReserva = (reserva: Reserva) => {
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Adultos</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.adultos ?? reserva.personas ?? 1}</td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Niños</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.ninos_menores ?? 0}</td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Total</td><td style="padding:8px;border-bottom:1px solid #eee;"><strong>${moneda(total)}</strong></td></tr>
-      <tr><td style="padding:8px;border-bottom:1px solid #eee;">Anticipo 40%</td><td style="padding:8px;border-bottom:1px solid #eee;">${moneda(anticipo)}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #eee;">Anticipo solicitado</td><td style="padding:8px;border-bottom:1px solid #eee;">${moneda(anticipo)}</td></tr>
       <tr><td style="padding:8px;border-bottom:1px solid #eee;">Saldo pendiente</td><td style="padding:8px;border-bottom:1px solid #eee;">${moneda(saldo)}</td></tr>
-      <tr><td style="padding:8px;border-bottom:1px solid #eee;">Estado</td><td style="padding:8px;border-bottom:1px solid #eee;">Pendiente de confirmación</td></tr>
-      <tr><td style="padding:8px;border-bottom:1px solid #eee;">Fecha de solicitud</td><td style="padding:8px;border-bottom:1px solid #eee;">${formatearFechaColombia(reserva.created_at)}</td></tr>
+      <tr><td style="padding:8px;border-bottom:1px solid #eee;">Estado de reserva</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.estado || "Pendiente"}</td></tr>
+      ${interno ? `<tr><td style="padding:8px;border-bottom:1px solid #eee;">Estado del pago Wompi</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.pago_estado || "Sin pago registrado"}</td></tr>` : ""}
+      <tr><td style="padding:8px;border-bottom:1px solid #eee;">${interno ? "Fecha y hora de creación" : "Fecha de solicitud"}</td><td style="padding:8px;border-bottom:1px solid #eee;">${formatearFechaColombia(reserva.created_at, interno)}</td></tr>
+      ${reserva.observaciones ? `<tr><td style="padding:8px;border-bottom:1px solid #eee;">Observaciones</td><td style="padding:8px;border-bottom:1px solid #eee;">${reserva.observaciones}</td></tr>` : ""}
     </table>
   `;
 };
@@ -98,10 +109,12 @@ const resumenReserva = (reserva: Reserva) => {
 async function registrarLog(
   supabase: any,
   reservaId: unknown,
-  tipo: "correo_refugio" | "correo_cliente",
+  tipo: TipoCorreo,
   destinatario: string,
   estado: LogEstado,
   error = "",
+  providerId: string | null = null,
+  logId?: string,
 ) {
   const payload = {
     reserva_id: normalizarReservaId(reservaId),
@@ -109,29 +122,79 @@ async function registrarLog(
     destinatario,
     estado,
     error,
+    provider_id: providerId,
   };
 
-  const { error: logError } = await supabase.from("notificaciones_reserva").insert(payload);
-  if (logError) {
-    console.error("No se pudo registrar log de notificación:", logError, payload);
+  try {
+    const query = logId
+      ? supabase.from("notificaciones_reserva").update(payload).eq("id", logId)
+      : supabase.from("notificaciones_reserva").insert(payload);
+    const { data, error: logError } = await query.select("id").single();
+    if (logError) throw logError;
+    return { id: data.id as string, ok: true };
+  } catch (logError) {
+    console.error("No se pudo registrar log de notificación; revisar notificaciones-reserva.sql:", logError);
+    return { id: logId, ok: false };
   }
 }
 
-async function enviarCorreo(apiKey: string, from: string, to: string, subject: string, html: string) {
-  const response = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from, to, subject, html }),
-  });
-
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(body?.message || `No se pudo enviar el correo a ${to}.`);
+async function enviarCorreo(apiKey: string, from: string, to: string, subject: string, html: string, clave: string) {
+  for (let intento = 0; intento < 3; intento += 1) {
+    let reintentable = true;
+    let espera = 500 * 2 ** intento;
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": clave,
+        },
+        body: JSON.stringify({ from, to: [to], subject, html }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const body = await response.json().catch(() => ({}));
+      reintentable = response.status === 429 || response.status >= 500 || body?.name === "concurrent_idempotent_requests";
+      const retryAfter = Number(response.headers.get("retry-after"));
+      if (Number.isFinite(retryAfter) && retryAfter > 0) espera = Math.min(retryAfter * 1000, 5000);
+      if (!response.ok || body?.error || typeof body?.id !== "string" || !body.id.trim()) {
+        const detalle = typeof body?.error === "string" ? body.error : body?.error?.message;
+        throw new Error(`Resend HTTP ${response.status}: ${body?.message || detalle || "Respuesta sin id de mensaje"}`);
+      }
+      return String(body.id);
+    } catch (error) {
+      if (!reintentable || intento === 2) throw error;
+      console.warn("Reintentando correo por fallo temporal", { intento: intento + 1 });
+      await new Promise((resolve) => setTimeout(resolve, espera));
+    }
   }
-  return body;
+  throw new Error("No se pudo completar el envío.");
+}
+
+async function notificarDestinatario(
+  supabase: any, reservaId: unknown, tipo: TipoCorreo, destinatario: string,
+  apiKey: string, remitente: string, asunto: string, html: string,
+) {
+  const pendiente = await registrarLog(supabase, reservaId, tipo, destinatario, "pendiente");
+  let estado: LogEstado = "enviado";
+  let providerId: string | null = null;
+  let errorEnvio = "";
+  try {
+    const faltantes = [
+      !apiKey && "RESEND_API_KEY", !remitente && "CORREO_REMITENTE",
+      !destinatario && (tipo === "equipo_nueva_reserva" ? "CORREO_RESERVAS" : "correo del cliente"),
+    ].filter(Boolean);
+    if (faltantes.length) throw new Error(`Falta configurar: ${faltantes.join(", ")}.`);
+    console.info("Intentando notificación de reserva", { reserva_id: reservaId, tipo });
+    providerId = await enviarCorreo(apiKey, remitente, destinatario, asunto, html, `reserva/${reservaId}/${tipo}`);
+    console.info("Correo aceptado por Resend", { reserva_id: reservaId, tipo, provider_id: providerId });
+  } catch (error) {
+    estado = "error";
+    errorEnvio = error instanceof Error ? error.message : "Error enviando correo.";
+    console.error("Falló notificación de reserva", { reserva_id: reservaId, tipo, error: errorEnvio });
+  }
+  const log = await registrarLog(supabase, reservaId, tipo, destinatario, estado, errorEnvio, providerId, pendiente.id);
+  return { tipo, ok: estado === "enviado", log_ok: log.ok };
 }
 
 async function buscarReserva(supabase: any, reservaId: unknown, lookup: Record<string, string> | null) {
@@ -141,7 +204,7 @@ async function buscarReserva(supabase: any, reservaId: unknown, lookup: Record<s
     return data;
   }
 
-  if (!lookup) return null;
+  if (!lookup?.celular || !lookup.cabana || !lookup.fecha_ingreso || !lookup.fecha_salida) return null;
 
   let query = supabase
     .from("reservas")
@@ -160,40 +223,18 @@ async function buscarReserva(supabase: any, reservaId: unknown, lookup: Record<s
   return data?.[0] || null;
 }
 
-function reservaDesdePayload(payload: Record<string, any>): Reserva | null {
-  const reservaPayload = payload.reserva || payload.reservaPayload || null;
-  if (reservaPayload) return reservaPayload;
-
-  if (!payload.nombre && !payload.correoCliente && !payload.fechaIngreso) return null;
-
-  return {
-    id: payload.reservaId || payload.reserva_id || null,
-    nombre: payload.nombre || "",
-    correo: payload.correoCliente || payload.correo || "",
-    celular: payload.celular || "",
-    cabana: payload.cabana || "",
-    fecha_ingreso: payload.fechaIngreso || payload.fecha_ingreso || "",
-    fecha_salida: payload.fechaSalida || payload.fecha_salida || "",
-    adultos: payload.adultos,
-    ninos_menores: payload.ninosMenores ?? payload.ninos_menores,
-    total: payload.total,
-    anticipo: payload.anticipo,
-    saldo_pendiente: payload.saldoPendiente ?? payload.saldo_pendiente,
-    created_at: payload.created_at || new Date().toISOString(),
-  };
-}
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
+  if (req.method !== "POST") return Response.json({ ok: false }, { status: 405, headers: corsHeaders });
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    const correoReservas = Deno.env.get("CORREO_RESERVAS") || "refugiolaarboleda@gmail.com";
-    const correoRemitente = Deno.env.get("CORREO_REMITENTE");
+    const resendKey = Deno.env.get("RESEND_API_KEY")?.trim() || "";
+    const correoReservas = Deno.env.get("CORREO_RESERVAS")?.trim() || "";
+    const correoRemitente = Deno.env.get("CORREO_REMITENTE")?.trim() || "";
 
     if (!supabaseUrl || !serviceKey) {
       return Response.json({ ok: false, message: "Faltan SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY." }, { status: 500, headers: corsHeaders });
@@ -205,76 +246,55 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(10000) }) },
     });
 
-    const reservaEncontrada = await buscarReserva(supabaseAdmin, reservaId, lookup);
-    const reservaPayload = reservaDesdePayload(payload);
-    const reserva = reservaEncontrada || reservaPayload;
+    const reserva = await buscarReserva(supabaseAdmin, reservaId, lookup);
 
     if (!reserva) {
-      return Response.json({ ok: false, message: "Reserva no encontrada y payload insuficiente." }, { status: 404, headers: corsHeaders });
+      return Response.json({ ok: false, message: "No se encontró la reserva guardada." }, { status: 404, headers: corsHeaders });
     }
 
-    const idParaLog = reserva.id || reservaEncontrada?.id || null;
-    const correoCliente = reserva.correo || payload.correoCliente || "";
-
-    if (!resendKey || !correoRemitente) {
-      await registrarLog(supabaseAdmin, idParaLog, "correo_refugio", correoReservas, "pendiente", "Correos no configurados todavía.");
-      if (correoCliente) {
-        await registrarLog(supabaseAdmin, idParaLog, "correo_cliente", correoCliente, "pendiente", "Correos no configurados todavía.");
-      }
-      return Response.json({ ok: false, configured: false, message: "Correos no configurados todavía." }, { headers: corsHeaders });
-    }
+    const idParaLog = reserva.id;
+    const correoCliente = String(reserva.correo || "").trim();
 
     const resumen = resumenReserva(reserva);
     const htmlRefugio = htmlBase(
-      "Nueva solicitud de reserva",
-      `${resumen}<p><strong>Ingresa al panel administrativo para revisar disponibilidad, verificar pago y confirmar la reserva.</strong></p>`,
+      "NUEVA SOLICITUD DE RESERVA",
+      `<p><strong>Esta reserva fue creada desde la página web. Todavía puede estar pendiente de pago.</strong></p>
+       ${resumenReserva(reserva, true)}
+       <p><a href="https://refugiolaarboleda.com/admin">Revisar reserva en el panel administrativo</a></p>`,
     );
 
     const htmlCliente = htmlBase(
       "Recibimos tu solicitud de reserva",
-      `<p>Hola ${reserva.nombre || ""},</p>
+      `<p>Hola ${escaparHtml(reserva.nombre || "")},</p>
        <p>Recibimos tu solicitud de reserva en Refugio La Arboleda. Tu reserva queda <strong>pendiente de confirmación</strong>.</p>
        ${resumen}
        <p>Nuestro equipo revisará la disponibilidad y el pago del anticipo para confirmar la reserva.</p>
        <p>WhatsApp: <a href="https://wa.me/573136303649">+57 313 630 3649</a></p>`,
     );
 
-    const errores: string[] = [];
-
-    try {
-      await enviarCorreo(resendKey, correoRemitente, correoReservas, "Nueva solicitud de reserva - Refugio La Arboleda", htmlRefugio);
-      await registrarLog(supabaseAdmin, idParaLog, "correo_refugio", correoReservas, "enviado");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Error enviando correo al refugio.";
-      errores.push(`Refugio: ${message}`);
-      await registrarLog(supabaseAdmin, idParaLog, "correo_refugio", correoReservas, "error", message);
-    }
-
+    // Independent jobs: errors or slow responses for one recipient do not block the other.
+    const trabajos = [notificarDestinatario(supabaseAdmin, idParaLog, "equipo_nueva_reserva", correoReservas,
+      resendKey, correoRemitente, `Nueva reserva pendiente — ${reserva.nombre || "Huésped"} — ${reserva.cabana || "Cabaña"}`, htmlRefugio)];
     if (correoCliente) {
-      try {
-        await enviarCorreo(resendKey, correoRemitente, correoCliente, "Recibimos tu solicitud de reserva - Refugio La Arboleda", htmlCliente);
-        await registrarLog(supabaseAdmin, idParaLog, "correo_cliente", correoCliente, "enviado");
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Error enviando correo al cliente.";
-        errores.push(`Cliente: ${message}`);
-        await registrarLog(supabaseAdmin, idParaLog, "correo_cliente", correoCliente, "error", message);
-      }
+      trabajos.push(notificarDestinatario(supabaseAdmin, idParaLog, "cliente_reserva", correoCliente,
+        resendKey, correoRemitente, "Recibimos tu solicitud de reserva - Refugio La Arboleda", htmlCliente));
     }
-
-    if (errores.length > 0) {
-      console.error("Errores enviando correos de reserva:", errores);
-      return Response.json(
-        { ok: false, configured: true, message: "La reserva se registró, pero uno o más correos fallaron.", errors: errores },
-        { status: 502, headers: corsHeaders },
-      );
-    }
-
-    return Response.json({ ok: true, configured: true, message: "Correos enviados correctamente." }, { headers: corsHeaders });
+    const resultados = await Promise.all(trabajos);
+    const ok = resultados.every((resultado) => resultado.ok);
+    // Provider details and internal addresses stay in server logs, not the public response.
+    return Response.json({
+      ok, configured: Boolean(resendKey && correoRemitente && correoReservas),
+      logs_ok: resultados.every((resultado) => resultado.log_ok),
+      cliente_enviado: resultados.some((resultado) => resultado.tipo === "cliente_reserva" && resultado.ok),
+      equipo_enviado: resultados.some((resultado) => resultado.tipo === "equipo_nueva_reserva" && resultado.ok),
+      message: ok ? "Correos aceptados por el proveedor." : "La reserva se registró, pero uno o más correos fallaron.",
+    }, { headers: corsHeaders });
   } catch (error) {
     console.error("Error enviando correos de reserva:", error);
-    const message = error instanceof Error ? error.message : "No se pudieron enviar los correos.";
+    const message = "La reserva permanece guardada. No se pudieron procesar los correos.";
     return Response.json(
       { ok: false, message },
       { status: 500, headers: corsHeaders },

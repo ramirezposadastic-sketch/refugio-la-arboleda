@@ -1,16 +1,43 @@
-# React + Vite
+# Refugio La Arboleda
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Página web oficial para Refugio La Arboleda, un hospedaje ubicado en San Rafael, Antioquia.
 
-Currently, two official plugins are available:
+## Descripción
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Este proyecto es una aplicación web desarrollada para mostrar los servicios, tarifas, actividades y sistema de reservas de Refugio La Arboleda.
 
-## React Compiler
+La aplicación permite a los usuarios consultar información del hospedaje, revisar disponibilidad, calcular el valor de la reserva y comunicarse directamente por WhatsApp.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tecnologías utilizadas
 
-## Expanding the ESLint configuration
+- React
+- Vite
+- JavaScript
+- HTML5
+- CSS3
+- Supabase
+- GitHub
+- Vercel
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Funcionalidades principales
+
+- Página informativa del hospedaje.
+- Sección de cabañas, tarifas y actividades.
+- Sistema de reservas.
+- Cálculo automático de noches, tarifas, anticipo y saldo.
+- Disponibilidad por cabaña.
+- Panel administrativo para gestionar reservas.
+- Integración con WhatsApp.
+- Despliegue en Vercel.
+
+## Demo
+
+Puedes ver el proyecto aquí:
+
+https://refugiolaarboleda.com
+
+## Autor
+
+Desarrollado por Brayan Stic Ramirez Posada.
+
+GitHub: [https://github.com/ramirezposadastic](https://github.com/ramirezposadastic-sketch)

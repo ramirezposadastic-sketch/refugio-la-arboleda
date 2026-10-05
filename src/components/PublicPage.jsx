@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "./Navbar";
+import "./PublicPage.css";
 import Hero from "./Hero";
 import Experiencia from "./Experiencia";
 import Cabanas from "./Cabañas";
+import CabanaExplorer from "./CabanaExplorer/CabanaExplorer";
 import Tarifas from "./Tarifas";
 import BeneficiosIncluidos from "./BeneficiosIncluidos";
 import Actividades from "./Actividades";
-import Galeria from "./Galeria";
 import Ubicacion from "./Ubicacion";
 import Reservas from "./Reservas";
 import Terminos from "./Terminos";
@@ -32,15 +33,15 @@ function PublicPage() {
   }, []);
 
   return (
-    <>
+    <div className="public-site">
       <Navbar />
       <Hero fotosDinamicas={fotosDinamicas} />
       <Experiencia />
       <Cabanas fotosDinamicas={fotosDinamicas} />
+      <CabanaExplorer />
       <Tarifas />
       <BeneficiosIncluidos />
       <Actividades fotosDinamicas={fotosDinamicas} />
-      <Galeria fotosDinamicas={fotosDinamicas} />
       <Ubicacion />
       <Reservas />
       <Terminos />
@@ -57,7 +58,7 @@ function PublicPage() {
       </a>
 
       <Footer />
-    </>
+    </div>
   );
 }
 
