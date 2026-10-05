@@ -5,10 +5,10 @@ import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Experiencia from "./Experiencia";
 import Cabanas from "./Cabañas";
+import CabanaExplorer from "./CabanaExplorer/CabanaExplorer";
 import Tarifas from "./Tarifas";
 import BeneficiosIncluidos from "./BeneficiosIncluidos";
 import Actividades from "./Actividades";
-import Galeria from "./Galeria";
 import Ubicacion from "./Ubicacion";
 import Reservas from "./Reservas";
 import Terminos from "./Terminos";
@@ -37,10 +37,10 @@ function PublicPage() {
       <Hero fotosDinamicas={fotosDinamicas} />
       <Experiencia />
       <Cabanas fotosDinamicas={fotosDinamicas} />
+      <CabanaExplorer />
       <Tarifas />
       <BeneficiosIncluidos />
       <Actividades fotosDinamicas={fotosDinamicas} />
-      <Galeria fotosDinamicas={fotosDinamicas} />
       <Ubicacion />
       <Reservas />
       <Terminos />

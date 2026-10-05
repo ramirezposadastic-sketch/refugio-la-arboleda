@@ -6,7 +6,7 @@ const enlaces = [
   { href: "#cabanas", texto: "Cabañas" },
   { href: "#tarifas", texto: "Tarifas" },
   { href: "#actividades", texto: "Actividades" },
-  { href: "#galeria", texto: "Galería" },
+  { href: "#explora-cabana", texto: "Explorar" },
   { href: "#reservas", texto: "Reservas" },
   { href: "#contacto", texto: "Contacto" },
 ];
