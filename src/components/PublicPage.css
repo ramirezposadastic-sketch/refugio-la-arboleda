@@ -1,0 +1,138 @@
+/* Public-page-only theme. Admin and payment routes do not render this wrapper. */
+.public-site {
+  --verde-profundo: #29362b;
+  --verde-natural: #59654c;
+  --verde-suave: #f0f0e8;
+  --dorado: #b79860;
+  --marfil: #f8f5ee;
+  --texto: #292d28;
+  --sombra-premium: 0 14px 38px rgb(35 39 28 / 8%);
+  color: var(--texto);
+  background: var(--marfil);
+}
+
+.public-site .navbar {
+  background: #20251ff5;
+  border-bottom: 1px solid #b7986045;
+  box-shadow: 0 8px 28px #1118;
+}
+.public-site .logo-marca,
+.public-site .logo-marca span,
+.public-site .nav-links { color: #f5f0e5; }
+.public-site .logo-marca { font-weight: 650; }
+.public-site .logo-marca img { box-shadow: 0 0 0 1px #b7986060; }
+.public-site .nav-links { gap: clamp(2px, 1vw, 14px); }
+.public-site .nav-links a { font-size: .88rem; font-weight: 600; }
+.public-site .nav-links a:hover { color: #edcf94; background: #b798601a; }
+
+.public-site .hero-premium {
+  background: linear-gradient(90deg, #141b15d9, #20251f80, #20251f20), var(--hero-image) center/cover no-repeat;
+}
+.public-site .hero-premium h1 {
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  font-weight: 750;
+  line-height: 1.02;
+  letter-spacing: -.035em;
+  text-wrap: balance;
+}
+.public-site .hero-premium .section-kicker { color: #ead19f; }
+.public-site .hero-premium .btn-reservar {
+  background: #dcc18c;
+  color: #23271e;
+  border: 1px solid #eed6aa;
+  box-shadow: 0 10px 28px #0003;
+}
+.public-site .hero-premium .btn-reservar:hover { background: #eed6aa; }
+.public-site .hero-premium .btn-whatsapp { background: #1f28266e; border-color: #ded3b98c; }
+.public-site .hero-premium .btn-whatsapp:hover { background: #2e3c2ecc; }
+.public-site .section-kicker { color: #80612b; font-weight: 750; letter-spacing: .12em; }
+.public-site :is(.seccion-encabezado h2, .beneficios-copy h2, .reservas > h2, .terminos h2) {
+  color: #252b24;
+  font-weight: 750;
+  letter-spacing: -.035em;
+}
+.public-site :is(.experiencia-card, .cabana-detalle, .actividad-card-premium, .tarifa-card, .termino-card) {
+  border-color: #96815b2e;
+  box-shadow: var(--sombra-premium);
+}
+.public-site :is(.experiencia-card h3, .cabana-detalle h3, .actividad-card-premium h3, .tarifa-card h3) {
+  color: #293027;
+  line-height: 1.3;
+  font-weight: 700;
+}
+.public-site :is(.experiencia-card, .cabana-detalle, .beneficio-item) svg { color: #987837; }
+.public-site .cabana-imagen-card h3 { background: #1c251ee6; border-color: #c9ac735c; }
+.public-site .cabana-detalle { background: linear-gradient(145deg, #f4f0e5, #fff); }
+.public-site .tarifas { background: #eeeade; }
+.public-site .beneficios-incluidos::before { background: linear-gradient(135deg, #e9e5d64a, #eeeade), var(--marfil); }
+.public-site :is(.beneficios-copy, .beneficios-rio-oro) { border-radius: 16px; border-color: #96815b2e; }
+.public-site .beneficio-item { background: #f8f5ee; }
+.public-site .actividad-card-premium span { color: #735723; background: #c9ac7324; }
+.public-site .ubicacion a { background: #293027; border: 1px solid #b79860; }
+.public-site .ubicacion a:hover { background: #414536; }
+.public-site .reserva-form button { background: #293027; }
+.public-site .reserva-form button:hover { background: #414536; }
+.public-site .contacto { background: #f0ece2; }
+.public-site .contacto-info { box-shadow: none; }
+.public-site .footer { background: #20251f; border-top: 1px solid #b7986050; }
+.public-site .footer h3 { color: #ead19f; }
+.public-site a:focus-visible, .public-site button:focus-visible { outline-color: #bd9b53; }
+
+/* Collapse navigation before the logo and seven links can collide on a tablet. */
+@media (max-width: 1100px) {
+  .public-site .navbar { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 12px; padding: 12px 16px; min-height: 76px; }
+  .public-site .logo-marca { width: auto; min-width: 0; justify-content: flex-start; font-size: 1rem; }
+  .public-site .logo-marca span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .public-site .logo-marca img { flex: 0 0 auto; }
+  .public-site .nav-toggle {
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; border-radius: 50%;
+    border: 1px solid #b7986080; background: #343a2e; color: #ead19f;
+  }
+  .public-site .nav-toggle:hover { background: #484a35; transform: none; }
+  .public-site .nav-toggle span { width: 18px; height: 2px; border-radius: 999px; background: currentColor; transition: transform 180ms ease, opacity 180ms ease; }
+  .public-site .menu-open .nav-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .public-site .menu-open .nav-toggle span:nth-child(2) { opacity: 0; }
+  .public-site .menu-open .nav-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .public-site .navbar .nav-links {
+    display: none; position: absolute; top: calc(100% + 8px); left: 16px; right: 16px;
+    width: auto; padding: 10px; margin: 0; flex-direction: column; gap: 4px;
+    background: #252b23; border: 1px solid #b7986070; border-radius: 14px; box-shadow: 0 18px 40px #0003;
+  }
+  .public-site .navbar .nav-links.nav-links-abierto { display: flex; }
+  .public-site .navbar .nav-links a { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 10px 14px; color: #f5f0e5; border-radius: 8px; }
+  .public-site .navbar .nav-links a:hover { background: #b7986024; color: #edcf94; }
+}
+@media (max-width: 768px) {
+  .public-site .hero-premium { background: linear-gradient(180deg, #172117b8, #20251f70), var(--hero-image) center/cover no-repeat; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-site .navbar *, .public-site .hero-premium a { transition: none; }
+}
+
+/* Reserve image space before lazy loading, so anchor destinations stay stable. */
+.public-site { font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+.public-site .cabana-imagen-card { position: relative; aspect-ratio: 1; min-height: 0; }
+.public-site .cabana-imagen-card > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.public-site .actividad-card-premium > img { height: auto; aspect-ratio: 4 / 3; object-fit: cover; }
+@media (min-width: 601px) and (max-width: 1100px) {
+  .public-site .cabanas-galeria, .public-site .actividades-grid-premium { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .public-site [data-aos] { opacity: 1 !important; transform: none !important; transition: none !important; }
+}
+
+/* Keep the persistent contact link in the header, clear of tour controls. */
+.public-site .navbar { padding-right: calc(clamp(18px, 5vw, 64px) + 62px); }
+.public-site .whatsapp-float {
+  top: 14px; bottom: auto; right: clamp(18px, 5vw, 64px);
+  width: 44px; height: 44px; z-index: 1001; box-shadow: none;
+}
+.public-site .whatsapp-float svg { width: 25px; height: 25px; }
+@media (max-width: 1100px) {
+  .public-site .navbar { padding-right: 74px; }
+  .public-site .whatsapp-float { top: 16px; right: 16px; }
+}
+@media (max-width: 600px) {
+  .public-site .logo-marca span { font-size: .9rem; }
+}

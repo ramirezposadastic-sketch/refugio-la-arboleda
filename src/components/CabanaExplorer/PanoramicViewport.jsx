@@ -78,6 +78,7 @@ export default function PanoramicViewport({ scene, onSceneChange, focusOnMount =
       <div className={styles.viewportShell}>
         <div
           ref={viewportRef}
+          style={{ '--scene-height': `${scene.height}px` }}
           className={`${styles.viewport} ${dragging ? styles.dragging : ''}`}
           role="region"
           aria-label={`Vista panorámica: ${scene.label}`}
@@ -116,7 +117,7 @@ export default function PanoramicViewport({ scene, onSceneChange, focusOnMount =
               <button
                 key={hotspot.target}
                 type="button"
-                className={`${styles.hotspot} ${hotspot.x > 0.7 ? styles.hotspotLeft : ''}`}
+                className={`${styles.hotspot} ${hotspot.prominent ? styles.doorHotspot : ''} ${hotspot.x > 0.7 ? styles.hotspotLeft : ''}`}
                 style={{ left: `${hotspot.x * 100}%`, top: `${hotspot.y * 100}%` }}
                 aria-label={hotspot.label}
                 onClick={() => onSceneChange(hotspot.target)}

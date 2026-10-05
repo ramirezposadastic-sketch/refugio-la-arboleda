@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { FiChevronLeft, FiChevronRight, FiMaximize2 } from 'react-icons/fi';
 import { initialSceneId, scenes } from './cabanaMedia';
 import ExplorerDialog from './ExplorerDialog';
@@ -7,6 +7,17 @@ import styles from './CabanaExplorer.module.css';
 
 function TourContent({ sceneId, onSceneChange, onExpand, expanded = false }) {
   const headingId = useId();
+  const listRef = useRef(null);
+  useEffect(() => {
+    const list = listRef.current;
+    const selected = list.querySelector('[aria-pressed="true"]');
+    const left = selected.offsetLeft;
+    const right = left + selected.offsetWidth;
+    if (left < list.scrollLeft || right > list.scrollLeft + list.clientWidth) {
+      list.scrollTo({ left: left - (list.clientWidth - selected.offsetWidth) / 2,
+        behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    }
+  }, [sceneId]);
   const [focusViewport, setFocusViewport] = useState(false);
   const current = scenes.findIndex((item) => item.id === sceneId);
   const scene = scenes[current];
@@ -31,7 +42,7 @@ function TourContent({ sceneId, onSceneChange, onExpand, expanded = false }) {
         <PanoramicViewport key={scene.id} scene={scene} onSceneChange={(id) => selectScene(id, true)} focusOnMount={focusViewport} />
         <div className={styles.sceneSidebar}>
           <p className={styles.selectorTitle}>Elige un espacio</p>
-          <div className={styles.sceneList} role="group" aria-label="Espacios del recorrido">
+          <div ref={listRef} className={styles.sceneList} role="group" aria-label="Espacios del recorrido">
             {scenes.map((item) => (
               <button
                 key={item.id}
@@ -40,7 +51,7 @@ function TourContent({ sceneId, onSceneChange, onExpand, expanded = false }) {
                 aria-pressed={item.id === sceneId}
                 onClick={() => selectScene(item.id)}
               >
-                <img src={item.thumb} alt="" width="64" height="44" loading="lazy" decoding="async" />
+                <img src={item.thumb} style={{ objectPosition: `${item.center * 100}% center` }} alt="" width="64" height="44" loading="lazy" decoding="async" />
                 <span>{item.label}</span>
                 <FiChevronRight aria-hidden="true" />
               </button>

@@ -5,24 +5,29 @@ const scene = (id, file, label, description, width, height, hotspots = [], cente
   src: `${base}${file}.webp`, thumb: `${base}${file}-mini.webp`,
 });
 
-// Only landmarks visible in the photographs receive a navigation marker.
-// Exterior N06 remains independent: the specific cabin/entrance is unconfirmed.
+// Coordinates belong to the real photograph, so markers travel with the image.
+// The exterior-to-interior navigation was requested by the owner; this is not a 3D reconstruction.
 export const scenes = [
-  scene('P02', 'acceso', 'Acceso', 'La entrada, la escalera y el interior de madera.', 1600, 590, [
-    { target: 'P04', x: 0.47, y: 0.73, label: 'Ver habitación' },
-    { target: 'P17', x: 0.30, y: 0.56, label: 'Ver cocina' },
-  ], 0.38),
+  scene('EXT-N06', 'exterior', 'Exterior', 'La fachada de madera y los caminos del jardín.', 1600, 620, [
+    { target: 'INTERIOR', x: 0.246, y: 0.57, label: 'Entrar a la cabaña', prominent: true },
+  ], 0.246),
+  scene('INTERIOR', 'interior-general-real', 'Interior general', 'La habitación, la cocina y el acceso al baño en una misma vista.', 1536, 355, [
+    { target: 'P17', x: 0.10, y: 0.64, label: 'Ver cocina' },
+    { target: 'BANO', x: 0.444, y: 0.57, label: 'Ver baño' },
+    { target: 'EXT-N06', x: 0.89, y: 0.65, label: 'Salir al exterior' },
+  ], 0.56),
+  scene('BANO', 'bano-real', 'Baño', 'La ducha y el baño de madera de la cabaña.', 1536, 459, [], 0.41),
+  scene('P17', 'cocina-interior-real', 'Cocina', 'La cocina equipada y la salida hacia la terraza.', 1536, 355, [
+    { target: 'INTERIOR', x: 0.19, y: 0.67, label: 'Ver interior general' },
+    { target: 'P28', x: 0.87, y: 0.57, label: 'Salir a la terraza' },
+  ], 0.55),
   scene('P04', 'habitacion', 'Habitación', 'La cama principal y el acceso al altillo.', 1600, 380, [
     { target: 'P12', x: 0.27, y: 0.46, label: 'Subir al altillo' },
-    { target: 'P02', x: 0.82, y: 0.70, label: 'Volver al acceso' },
+    { target: 'INTERIOR', x: 0.82, y: 0.70, label: 'Ver interior general' },
   ]),
   scene('P12', 'altillo', 'Altillo', 'Un segundo espacio de descanso sobre la habitación.', 1600, 416, [
     { target: 'P04', x: 0.67, y: 0.81, label: 'Ver habitación' },
   ]),
-  scene('P17', 'cocina', 'Cocina', 'La cocina equipada y la salida hacia la terraza.', 1600, 358, [
-    { target: 'P02', x: 0.34, y: 0.72, label: 'Volver al acceso' },
-    { target: 'P28', x: 0.92, y: 0.64, label: 'Salir a la terraza' },
-  ], 0.65),
   scene('P28', 'terraza', 'Terraza', 'Mesa al aire libre, jacuzzi y naturaleza alrededor.', 1600, 760, [
     { target: 'P27', x: 0.78, y: 0.69, label: 'Ver jacuzzi' },
   ], 0.61),
@@ -30,11 +35,9 @@ export const scenes = [
     { target: 'P17', x: 0.265, y: 0.52, label: 'Entrar a la cocina' },
     { target: 'P28', x: 0.405, y: 0.69, label: 'Ver terraza' },
   ], 0.34),
-  scene('EXT-N06', 'exterior', 'Exterior', 'La fachada de madera y los caminos del jardín.', 1600, 620, [], 0.36),
 ];
 
-export const initialSceneId = 'P28';
-export const coverSrc = `${base}portada-recorrido.webp`;
+export const initialSceneId = 'EXT-N06';
 
 export const photos = [
   { id: 'N20', file: 'foto-fachada', title: 'Entre árboles y madera', alt: 'Fachada de la cabaña con ventanas altas, escaleras de piedra y jardín', width: 1600, height: 872 },

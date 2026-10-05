@@ -1,6 +1,6 @@
-import { Component, lazy, Suspense, useId, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useId, useRef, useState } from 'react';
 import { FiArrowUpRight, FiCamera, FiChevronLeft, FiChevronRight, FiCompass, FiMaximize2 } from 'react-icons/fi';
-import { coverSrc, photos } from './cabanaMedia';
+import { photos } from './cabanaMedia';
 import ExplorerDialog from './ExplorerDialog';
 import styles from './CabanaExplorer.module.css';
 
@@ -77,16 +77,27 @@ function PhotoGallery() {
 
 export default function CabanaExplorer() {
   const [mode, setMode] = useState('tour');
-  const [started, setStarted] = useState(false);
+  const [nearby, setNearby] = useState(false);
+  const sectionRef = useRef(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setNearby(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '400px' });
+    observer.observe(sectionRef.current);
+    return () => observer.disconnect();
+  }, []);
   const headingId = useId();
   return (
-    <section id="explora-cabana" className={styles.explorer} aria-labelledby={headingId}>
+    <section ref={sectionRef} id="explora-cabana" className={styles.explorer} aria-labelledby={headingId}>
       <div className={styles.inner}>
         <div className={styles.header}>
           <div>
             <span className={styles.kicker}>Conoce cada rincón</span>
             <h2 id={headingId}>Explora la cabaña</h2>
-            <p>De la habitación a la terraza. Mira alrededor y descubre los espacios a tu ritmo.</p>
+            <p>Entra a la cabaña y descubre cada espacio a tu ritmo.</p>
           </div>
           <div className={styles.modeSwitch} role="group" aria-label="Elige cómo explorar la cabaña">
             <button type="button" aria-pressed={mode === 'tour'} onClick={() => setMode('tour')}><FiCompass aria-hidden="true" /> Recorrido</button>
@@ -94,24 +105,13 @@ export default function CabanaExplorer() {
           </div>
         </div>
         <div hidden={mode !== 'tour'}>
-          {started ? (
+          {nearby ? (
             <ExplorerBoundary>
               <Suspense fallback={<div className={styles.fallback} role="status">Preparando el recorrido…</div>}>
                 <PanoramicTour />
               </Suspense>
             </ExplorerBoundary>
-          ) : (
-            <div className={styles.cover}>
-              <img src={coverSrc} alt="Terraza de madera con jacuzzi, mesa y vista al bosque" width="1000" height="475" loading="lazy" decoding="async" />
-              <div className={styles.coverContent}>
-                <span>Un vistazo desde adentro</span>
-                <h3>Tu pausa empieza aquí.</h3>
-                <button type="button" className={styles.startButton} onClick={() => setStarted(true)}>Explorar los espacios <FiArrowUpRight aria-hidden="true" /></button>
-                <p>Arrastra la imagen y sigue las flechas.</p>
-              </div>
-              <span className={styles.coverCount}>7 espacios para descubrir</span>
-            </div>
-          )}
+          ) : <div className={styles.fallback} role="status">Preparando el recorrido…</div>}
         </div>
         {mode === 'photos' && <PhotoGallery />}
         <p className={styles.footnote}>Fotografías reales de la cabaña y su entorno.</p>

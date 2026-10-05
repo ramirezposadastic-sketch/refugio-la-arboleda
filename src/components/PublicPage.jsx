@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "./Navbar";
+import "./PublicPage.css";
 import Hero from "./Hero";
 import Experiencia from "./Experiencia";
 import Cabanas from "./Cabañas";
@@ -32,7 +33,7 @@ function PublicPage() {
   }, []);
 
   return (
-    <>
+    <div className="public-site">
       <Navbar />
       <Hero fotosDinamicas={fotosDinamicas} />
       <Experiencia />
@@ -57,7 +58,7 @@ function PublicPage() {
       </a>
 
       <Footer />
-    </>
+    </div>
   );
 }
 
