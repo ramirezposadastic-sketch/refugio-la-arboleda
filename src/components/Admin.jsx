@@ -1,4 +1,10 @@
 ﻿import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AdminSidebar from "./AdminPanel/AdminSidebar";
+import AdminStatistics from "./AdminPanel/AdminStatistics.jsx";
+import AdminReservationList from "./AdminPanel/AdminReservationList";
+import AdminReservationDetail from "./AdminPanel/AdminReservationDetail";
+import { FiCalendar, FiCheck, FiX, FiFileText, FiTrendingUp, FiCreditCard, FiLayers, FiDollarSign } from "react-icons/fi";
+import "./AdminPanel/AdminPanel.css";
 import { supabase } from "../supabase";
 import {
   CABANAS,
@@ -247,11 +253,13 @@ function Admin() {
   const [filtroEstado, setFiltroEstado] = useState(FILTRO_TODAS);
   const [filtroCabana, setFiltroCabana] = useState(FILTRO_TODAS);
   const [filtroPago, setFiltroPago] = useState(FILTRO_TODOS);
-  const [filtroFecha, setFiltroFecha] = useState(FILTRO_TODOS);
-  const reservasScrollRef = useRef(null);
-  const [puedeMoverIzquierda, setPuedeMoverIzquierda] = useState(false);
-  const [puedeMoverDerecha, setPuedeMoverDerecha] = useState(false);
-  const [mostrarControlesTabla, setMostrarControlesTabla] = useState(false);
+  const [filtroFecha, setFiltroFecha] = useState(FILTRO_MES_ACTUAL);
+  const [activeView, setActiveView] = useState("admin-dashboard");
+  const [paginaReservas, setPaginaReservas] = useState(1);
+  const [reservasPorPagina, setReservasPorPagina] = useState(10);
+  const [ordenReservas, setOrdenReservas] = useState("recientes");
+  const [selectedReservationId, setSelectedReservationId] = useState(null);
+  const reservationDetailRef = useRef(null);
   const [reservas, setReservas] = useState([]);
   const [reservasEliminadas, setReservasEliminadas] = useState([]);
   const [mostrarHistorialEliminadas, setMostrarHistorialEliminadas] = useState(false);
@@ -958,54 +966,20 @@ function Admin() {
     });
   }, [reservas, busqueda, filtroEstado, filtroCabana, filtroPago, filtroFecha]);
 
-  const actualizarEstadoScrollReservas = useCallback(() => {
-    const contenedor = reservasScrollRef.current;
-    const tolerancia = 4;
-
-    if (!contenedor) {
-      setPuedeMoverIzquierda(false);
-      setPuedeMoverDerecha(false);
-      setMostrarControlesTabla(false);
-      return;
-    }
-
-    const tieneDesbordamiento = contenedor.scrollWidth - contenedor.clientWidth > tolerancia;
-    setMostrarControlesTabla(tieneDesbordamiento);
-    setPuedeMoverIzquierda(tieneDesbordamiento && contenedor.scrollLeft > tolerancia);
-    setPuedeMoverDerecha(
-      tieneDesbordamiento &&
-        contenedor.scrollLeft + contenedor.clientWidth < contenedor.scrollWidth - tolerancia,
-    );
-  }, []);
-
-  const moverTablaReservas = (cantidad) => {
-    reservasScrollRef.current?.scrollBy({
-      left: cantidad,
-      behavior: "smooth",
+  const reservasOrdenadas = useMemo(() => {
+    if (ordenReservas === "pendientes") return reservasFiltradas;
+    return [...reservasFiltradas].sort((a, b) => {
+      const fechaA = a.created_at || a.fecha_ingreso || "";
+      const fechaB = b.created_at || b.fecha_ingreso || "";
+      return fechaB.localeCompare(fechaA) || String(b.id || "").localeCompare(String(a.id || ""), undefined, { numeric: true });
     });
+  }, [reservasFiltradas, ordenReservas]);
 
-    window.setTimeout(actualizarEstadoScrollReservas, 360);
-  };
-
-  useEffect(() => {
-    const contenedor = reservasScrollRef.current;
-    const actualizar = () => actualizarEstadoScrollReservas();
-    const frame = window.requestAnimationFrame(actualizar);
-
-    contenedor?.addEventListener("scroll", actualizar, { passive: true });
-    window.addEventListener("resize", actualizar);
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-      contenedor?.removeEventListener("scroll", actualizar);
-      window.removeEventListener("resize", actualizar);
-    };
-  }, [actualizarEstadoScrollReservas, reservasFiltradas.length]);
   const reportes = useMemo(() => {
     const hoy = new Date();
     const mesActual = hoy.getMonth();
     const anioActual = hoy.getFullYear();
-    const reservasValidas = reservas.filter((r) => normalizarEstado(r.estado) !== "cancelada");
+    const reservasValidas = reservasFiltradas.filter((r) => normalizarEstado(r.estado) !== "cancelada");
 
     const ingresosMes = reservasValidas.reduce((acc, r) => {
       const fecha = new Date(`${(r.created_at || r.fecha_ingreso).slice(0, 10)}T00:00:00`);
@@ -1017,19 +991,19 @@ function Admin() {
 
     const saldosPendientes = reservasValidas.reduce((acc, r) => acc + valorSaldo(r), 0);
 
-    const porMes = reservas.reduce((acc, r) => {
+    const porMes = reservasFiltradas.reduce((acc, r) => {
       const llave = (r.created_at || r.fecha_ingreso || "").slice(0, 7) || "Sin fecha";
       acc[llave] = (acc[llave] || 0) + 1;
       return acc;
     }, {});
 
     const porCabana = CABANAS.reduce((acc, cabana) => {
-      acc[cabana] = reservas.filter((r) => normalizarCabana(r.cabana) === cabana).length;
+      acc[cabana] = reservasFiltradas.filter((r) => normalizarCabana(r.cabana) === cabana).length;
       return acc;
     }, {});
 
     return { ingresosMes, saldosPendientes, porMes, porCabana };
-  }, [reservas]);
+  }, [reservasFiltradas]);
 
   const fechaISOCalendario = (year, month, day) => {
     const mes = String(month + 1).padStart(2, "0");
@@ -1273,10 +1247,10 @@ function Admin() {
       reserva?.pago_error,
     );
 
-  const pendientes = reservas.filter((r) => normalizarEstado(r.estado) === "pendiente").length;
-  const confirmadas = reservas.filter((r) => normalizarEstado(r.estado) === "confirmada").length;
-  const canceladas = reservas.filter((r) => normalizarEstado(r.estado) === "cancelada").length;
-  const reservasNoCanceladas = reservas.filter((r) => normalizarEstado(r.estado) !== "cancelada");
+  const pendientes = reservasFiltradas.filter((r) => normalizarEstado(r.estado) === "pendiente").length;
+  const confirmadas = reservasFiltradas.filter((r) => normalizarEstado(r.estado) === "confirmada").length;
+  const canceladas = reservasFiltradas.filter((r) => normalizarEstado(r.estado) === "cancelada").length;
+  const reservasNoCanceladas = reservasFiltradas.filter((r) => normalizarEstado(r.estado) !== "cancelada");
   const dineroTotal = reservasNoCanceladas.reduce((acc, r) => acc + valorTotal(r), 0);
   const anticiposTotales = reservasNoCanceladas.reduce((acc, r) => acc + valorAnticipo(r), 0);
 
@@ -1348,13 +1322,66 @@ function Admin() {
     );
   }
 
+  const totalPaginas = Math.max(1, Math.ceil(reservasOrdenadas.length / reservasPorPagina));
+  const paginaActual = Math.min(paginaReservas, totalPaginas);
+  const reservasPagina = reservasOrdenadas.slice((paginaActual - 1) * reservasPorPagina, paginaActual * reservasPorPagina);
+  const selectedReservation = reservasPagina.find((r) => r.id === selectedReservationId) || reservasPagina[0] || null;
+  const mostrarContexto = ["admin-dashboard", "admin-reservas", "admin-estadisticas"].includes(activeView);
+  const hoyPeriodo = new Date();
+  const periodoLabel = filtroFecha === FILTRO_MES_ACTUAL
+    ? nombreMesCalendario(hoyPeriodo.getFullYear(), hoyPeriodo.getMonth())
+    : "Histórico completo";
+  const actualizarFiltro = (setter, value) => {
+    setter(value);
+    setPaginaReservas(1);
+    setSelectedReservationId(null);
+  };
+  const navigateView = (view) => {
+    setActiveView(view);
+    window.requestAnimationFrame(() => {
+      const main = document.getElementById("admin-dashboard");
+      main?.focus({ preventScroll: true });
+      main?.scrollIntoView({ block: "start", behavior: "instant" });
+    });
+  };
+  const cambiarPaginaReservas = (page) => {
+    setPaginaReservas(page);
+    setSelectedReservationId(null);
+    window.requestAnimationFrame(() => document.getElementById("admin-reservas")?.scrollIntoView({ block: "start", behavior: "instant" }));
+  };
+  const formatReservaUI = { normalizarCabana, normalizarEstado, fechaLegible, fechaHoraLegible,
+    calcularNoches, formatoMoneda, valorTotal, valorAnticipo, valorSaldo, adultosReserva, ninosReserva, personasReserva };
+  const selectReservation = (id) => {
+    setSelectedReservationId(id);
+    if (activeView === "admin-dashboard") {
+      const index = reservasOrdenadas.findIndex((r) => r.id === id);
+      setPaginaReservas(Math.floor(index / reservasPorPagina) + 1);
+      setActiveView("admin-reservas");
+    }
+    if (window.matchMedia("(max-width: 1100px)").matches) {
+      window.requestAnimationFrame(() => {
+        reservationDetailRef.current?.focus({ preventScroll: true });
+        reservationDetailRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+      });
+    }
+  };
+  const openPhotosFromSidebar = () => {
+    setMostrarGestionFotos(true);
+    cargarFotosSitio();
+    navigateView("admin-fotos");
+  };
+
   return (
-    <section className="admin">
+    <section className="admin admin-premium">
+      <button type="button" className="admin-skip-link" onClick={() => navigateView("admin-reservas")}>Ir al listado de reservas</button>
+      <AdminSidebar esAdmin={esAdmin} rol={rolUsuario} email={session?.user?.email} onLogout={cerrarSesion} onPhotos={openPhotosFromSidebar} activeView={activeView} onNavigate={navigateView} />
+      <main className="admin-main" id="admin-dashboard" tabIndex={-1}>
       <div className="admin-header">
         <div>
           <h2>Panel de Reservas</h2>
           <p>Gestión de disponibilidad, pagos y reportes. Rol: {rolUsuario || "sin rol"}</p>
         </div>
+        {mostrarContexto && <label className="admin-header-search"><span className="admin-sr-only">Buscar reservas por nombre o celular</span><input type="text" placeholder="Buscar por nombre o celular..." value={busqueda} onChange={(e) => actualizarFiltro(setBusqueda, e.target.value)} /></label>}
         <div className="admin-header-actions">
           {esAdmin && <button className="btn-exportar" onClick={exportarCsv}>Exportar reservas</button>}
           {esAdmin && (
@@ -1362,35 +1389,68 @@ function Admin() {
               className="btn-fotos-admin"
               type="button"
               onClick={() => {
-                const abrirFotos = !mostrarGestionFotos;
+                const abrirFotos = activeView !== "admin-fotos" || !mostrarGestionFotos;
                 setMostrarGestionFotos(abrirFotos);
                 if (abrirFotos) cargarFotosSitio();
+                navigateView(abrirFotos ? "admin-fotos" : "admin-dashboard");
               }}
             >
-              {mostrarGestionFotos ? "Ocultar fotos" : "Gestión de fotos"}
+              {mostrarGestionFotos && activeView === "admin-fotos" ? "Ocultar fotos" : "Gestión de fotos"}
             </button>
           )}
           {esAdmin && (
             <button
               className="btn-historial"
               type="button"
-              onClick={() => setMostrarHistorialEliminadas((valor) => !valor)}
+              onClick={() => {
+                const abrirEliminadas = activeView !== "admin-eliminadas" || !mostrarHistorialEliminadas;
+                setMostrarHistorialEliminadas(abrirEliminadas);
+                navigateView(abrirEliminadas ? "admin-eliminadas" : "admin-dashboard");
+              }}
             >
-              {mostrarHistorialEliminadas ? "Ocultar eliminadas" : "Ver eliminadas"}
+              {mostrarHistorialEliminadas && activeView === "admin-eliminadas" ? "Ocultar eliminadas" : "Ver eliminadas"}
             </button>
           )}
-          <button className="btn-salir" onClick={cerrarSesion}>Cerrar sesión</button>
+          <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
         </div>
       </div>
 
+      {mostrarContexto && <section className="admin-context-bar" aria-label="Periodo y filtros de reservas">
+        <div className="admin-context-heading"><p>Periodo: <strong>{periodoLabel}</strong></p><label>Orden
+          <select aria-label="Orden de reservas" value={ordenReservas} onChange={(e) => actualizarFiltro(setOrdenReservas, e.target.value)}><option value="recientes">Más recientes</option><option value="pendientes">Pendientes primero</option></select>
+        </label></div>
+      <div className="admin-filtros admin-filtros-profesional">
+        <label><span id="admin-filter-state-label">Estado</span><select aria-labelledby="admin-filter-state-label" value={filtroEstado} onChange={(e) => actualizarFiltro(setFiltroEstado, e.target.value)}>
+          <option>{FILTRO_TODAS}</option>
+          <option>Pendiente</option>
+          <option>Confirmada</option>
+          <option>Cancelada</option>
+        </select></label>
+        <label><span id="admin-filter-cabin-label">Cabaña</span><select aria-labelledby="admin-filter-cabin-label" value={filtroCabana} onChange={(e) => actualizarFiltro(setFiltroCabana, e.target.value)}>
+          <option>{FILTRO_TODAS}</option>
+          {CABANAS.map((cabana) => <option key={cabana}>{cabana}</option>)}
+        </select></label>
+        <label><span id="admin-filter-payment-label">Pago</span><select aria-labelledby="admin-filter-payment-label" value={filtroPago} onChange={(e) => actualizarFiltro(setFiltroPago, e.target.value)}>
+          <option>{FILTRO_TODOS}</option>
+          <option>Pago pendiente</option>
+          <option>Pago confirmado</option>
+        </select></label>
+        <label><span id="admin-filter-dates-label">Fechas</span><select aria-labelledby="admin-filter-dates-label" value={filtroFecha} onChange={(e) => actualizarFiltro(setFiltroFecha, e.target.value)}>
+          <option>{FILTRO_TODOS}</option>
+          <option>{FILTRO_MES_ACTUAL}</option>
+        </select></label>
+      </div>
+      </section>}
+
+      <div className="admin-view" hidden={!['admin-dashboard', 'admin-reservas'].includes(activeView)}>
       <div className="admin-metricas-bloques">
         <section className="admin-metricas-bloque">
           <h3>Estado de reservas</h3>
           <div className="admin-stats admin-stats-profesional">
-            <div className="stat-card"><h3>{reservas.length}</h3><p>Total de reservas</p></div>
-            <div className="stat-card pendiente solicitudes-nuevas"><h3>{pendientes}</h3><p>Solicitudes nuevas</p><span>Revisar primero</span></div>
-            <div className="stat-card confirmada"><h3>{confirmadas}</h3><p>Confirmadas</p></div>
-            <div className="stat-card cancelada"><h3>{canceladas}</h3><p>Canceladas</p></div>
+            <div className="stat-card"><FiCalendar aria-hidden="true" /><h3>{reservasFiltradas.length}</h3><p>Total de reservas</p></div>
+            <div className="stat-card pendiente solicitudes-nuevas"><FiFileText aria-hidden="true" /><h3>{pendientes}</h3><p>Solicitudes nuevas</p><span>Revisar primero</span></div>
+            <div className="stat-card confirmada"><FiCheck aria-hidden="true" /><h3>{confirmadas}</h3><p>Confirmadas</p></div>
+            <div className="stat-card cancelada"><FiX aria-hidden="true" /><h3>{canceladas}</h3><p>Canceladas</p></div>
           </div>
         </section>
 
@@ -1398,117 +1458,23 @@ function Admin() {
           <section className="admin-metricas-bloque resumen-financiero-admin">
             <h3>Resumen financiero</h3>
             <div className="admin-stats admin-stats-profesional resumen-financiero-grid">
-              <div className="stat-card ventas"><h3 className="valor-financiero">${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
-              <div className="stat-card anticipos"><h3 className="valor-financiero">${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
-              <div className="stat-card saldos"><h3 className="valor-financiero">${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
-              <div className="stat-card ingresos"><h3 className="valor-financiero">${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
+              <div className="stat-card ventas"><FiTrendingUp aria-hidden="true" /><h3 className="valor-financiero">${formatoMoneda(dineroTotal)}</h3><p>Ventas totales</p></div>
+              <div className="stat-card anticipos"><FiCreditCard aria-hidden="true" /><h3 className="valor-financiero">${formatoMoneda(anticiposTotales)}</h3><p>Anticipos</p></div>
+              <div className="stat-card saldos"><FiLayers aria-hidden="true" /><h3 className="valor-financiero">${formatoMoneda(reportes.saldosPendientes)}</h3><p>Saldos pendientes</p></div>
+              <div className="stat-card ingresos"><FiDollarSign aria-hidden="true" /><h3 className="valor-financiero">${formatoMoneda(reportes.ingresosMes)}</h3><p>Ingresos del mes</p></div>
             </div>
+            <p className="admin-finance-note">Ingresos del mes: reservas no canceladas de los filtros actuales, por fecha de creación (o ingreso si no hay creación), dentro del mes actual.</p>
           </section>
         )}
       </div>
 
-      <div className="admin-reportes">
-        <div>
-          <h3>Reservas por mes</h3>
-          {Object.entries(reportes.porMes).map(([mes, total]) => (
-            <p key={mes}><span>{mes}</span><strong>{total}</strong></p>
-          ))}
-        </div>
-        <div>
-          <h3>Reservas por cabaña</h3>
-          {Object.entries(reportes.porCabana).map(([cabanaItem, total]) => (
-            <p key={cabanaItem}><span>{cabanaItem}</span><strong>{total}</strong></p>
-          ))}
-        </div>
       </div>
-
-      <section className="admin-calendario-disponibilidad">
-        <div className="admin-calendario-header">
-          <div>
-            <span className="admin-calendario-kicker">Calendario</span>
-            <h3>Calendario de disponibilidad</h3>
-            <p>Consulta rápidamente qué fechas están ocupadas o disponibles por cabaña.</p>
-          </div>
-          <div className="admin-calendario-controles">
-            <button type="button" onClick={() => cambiarMesCalendario(-1)}>Anterior</button>
-            <strong>{nombreMesCalendario(mesCalendarioAdmin.year, mesCalendarioAdmin.month)}</strong>
-            <button type="button" onClick={() => cambiarMesCalendario(1)}>Siguiente</button>
-            <button type="button" onClick={volverMesActualCalendario}>Hoy</button>
-          </div>
-        </div>
-
-        <div className="admin-calendario-toolbar">
-          <div className="admin-calendario-leyenda" aria-label="Leyenda de disponibilidad">
-            <span><i className="cal-dot disponible" />Disponible</span>
-            <span><i className="cal-dot parcial" />Parcial</span>
-            <span><i className="cal-dot ocupado" />Ocupado</span>
-          </div>
-          <label className="admin-calendario-filtro">
-            Cabaña
-            <select value={filtroCabanaCalendario} onChange={(event) => setFiltroCabanaCalendario(event.target.value)}>
-              <option>{FILTRO_TODAS}</option>
-              {CABANAS.map((cabanaItem) => <option key={cabanaItem}>{cabanaItem}</option>)}
-            </select>
-          </label>
-        </div>
-
-        <div className="admin-calendario-layout">
-          <div className="admin-calendario-grid" aria-label="Calendario de disponibilidad mensual">
-            {["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"].map((dia) => (
-              <div className="admin-calendario-dia-nombre" key={dia}>{dia}</div>
-            ))}
-            {diasCalendarioAdmin.map((dia) => (
-              dia.fueraMes ? (
-                <div className="admin-calendario-dia fuera-mes" key={dia.key} aria-hidden="true" />
-              ) : (
-                <button
-                  type="button"
-                  key={dia.key}
-                  className={`admin-calendario-dia ${dia.estado} ${dia.fechaISO === fechaSeleccionadaCalendario ? "seleccionado" : ""} ${dia.fechaISO === fechaToISO(new Date()) ? "hoy" : ""}`}
-                  onClick={() => setFechaSeleccionadaCalendario(dia.fechaISO)}
-                  title={dia.cabanasFiltradas.map((item) => `${item.cabana}: ${item.ocupada ? "Ocupada" : "Disponible"}`).join(" | ")}
-                >
-                  <span className="admin-calendario-numero">{dia.day}</span>
-                  <span className="admin-calendario-estado">{dia.estado === "disponible" ? "Disponible" : dia.estado === "parcial" ? "Parcial" : "Ocupado"}</span>
-                  <strong>{dia.libres}/{dia.total} libres</strong>
-                </button>
-              )
-            ))}
-          </div>
-
-          <aside className="admin-calendario-detalle">
-            <span className={`admin-calendario-badge ${detalleDiaSeleccionado.estado}`}>
-              {detalleDiaSeleccionado.estado === "disponible" ? "Disponible" : detalleDiaSeleccionado.estado === "parcial" ? "Parcial" : "Ocupado"}
-            </span>
-            <h4>Disponibilidad del {fechaLegible(fechaSeleccionadaCalendario)}</h4>
-            <p>{detalleDiaSeleccionado.libres}/{detalleDiaSeleccionado.total} cabañas libres para nueva reserva.</p>
-            <div className="admin-calendario-cabanas">
-              {detalleDiaSeleccionado.cabanasFiltradas.map((item) => (
-                <article className={item.ocupada ? "cabana-dia ocupada" : "cabana-dia disponible"} key={item.cabana}>
-                  <strong>{item.cabana}</strong>
-                  {item.ocupada ? (
-                    <div>
-                      <span>Ocupada por: {item.reserva?.nombre || "Cliente sin nombre"}</span>
-                      <small>Ingreso: {fechaLegible(item.reserva?.fecha_ingreso)}</small>
-                      <small>Salida: {fechaLegible(item.reserva?.fecha_salida)}</small>
-                      <small>Estado: {item.reserva?.estado || "Pendiente"}</small>
-                      <small>Pago: {item.reserva?.pago_confirmado ? "Confirmado" : etiquetaEstadoPagoWompi(item.reserva?.pago_estado)}</small>
-                      <small>Observaciones: {item.reserva?.observaciones?.trim() || "Sin observaciones"}</small>
-                    </div>
-                  ) : (
-                    <span>Disponible para nueva reserva</span>
-                  )}
-                </article>
-              ))}
-            </div>
-            <button type="button" className="btn-nueva-reserva" onClick={abrirNuevaReservaDesdeCalendario}>
-              Crear reserva para esta fecha
-            </button>
-          </aside>
-        </div>
-      </section>
-      {esAdmin && mostrarGestionFotos && (
-        <section className="admin-fotos">
+      {activeView === "admin-dashboard" && <section className="admin-dashboard-recent admin-reservations-card" aria-labelledby="admin-recent-title">
+        <header className="admin-reservations-heading"><div><h3 id="admin-recent-title">Reservas recientes</h3><p>Del periodo y filtros seleccionados.</p></div><div className="admin-quick-links"><button type="button" onClick={() => navigateView("admin-reservas")}>Ver reservas</button><button type="button" onClick={() => navigateView("admin-calendario")}>Ver calendario</button></div></header>
+        <AdminReservationList reservas={reservasOrdenadas.slice(0, 5)} selectedId={selectedReservationId} onSelect={selectReservation} format={formatReservaUI} total={reservasFiltradas.length} />
+      </section>}
+      {esAdmin && mostrarGestionFotos && activeView === "admin-fotos" && (
+        <section id="admin-fotos" className="admin-fotos">
           <div className="admin-fotos-header">
             <div>
               <h3>Gestión de fotos</h3>
@@ -1640,7 +1606,7 @@ function Admin() {
         </section>
       )}
 
-      {esAdmin && mostrarHistorialEliminadas && (
+      {esAdmin && mostrarHistorialEliminadas && activeView === "admin-eliminadas" && (
         <div className="admin-historial-eliminadas">
           <h3>Historial de reservas eliminadas</h3>
           <div className="admin-tabla-wrapper">
@@ -1684,102 +1650,18 @@ function Admin() {
         </div>
       )}
 
-      <div className="admin-toolbar admin-toolbar-reservas">
-        <button className="btn-nueva-reserva" onClick={nuevaReserva}>+ Nueva Reserva</button>
-        <div className="admin-toolbar-reservas-info">
-          <span>{reservasFiltradas.length} reservas visibles</span>
-          {mostrarControlesTabla && (
-            <div className="reservas-scroll-toolbar" aria-label="Controles de desplazamiento horizontal de reservas">
-              <span className="reservas-scroll-label">Desplazar tabla</span>
-              <button
-                type="button"
-                className="reservas-scroll-button"
-                onClick={() => moverTablaReservas(-500)}
-                disabled={!puedeMoverIzquierda}
-                aria-label="Mover tabla hacia la izquierda"
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                className="reservas-scroll-button"
-                onClick={() => moverTablaReservas(500)}
-                disabled={!puedeMoverDerecha}
-                aria-label="Mover tabla hacia la derecha"
-              >
-                →
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="admin-filtros admin-filtros-profesional">
-        <input type="text" placeholder="Buscar por nombre o celular..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
-        <select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value)}>
-          <option>{FILTRO_TODAS}</option>
-          <option>Pendiente</option>
-          <option>Confirmada</option>
-          <option>Cancelada</option>
-        </select>
-        <select value={filtroCabana} onChange={(e) => setFiltroCabana(e.target.value)}>
-          <option>{FILTRO_TODAS}</option>
-          {CABANAS.map((cabana) => <option key={cabana}>{cabana}</option>)}
-        </select>
-        <select value={filtroPago} onChange={(e) => setFiltroPago(e.target.value)}>
-          <option>{FILTRO_TODOS}</option>
-          <option>Pago pendiente</option>
-          <option>Pago confirmado</option>
-        </select>
-        <select value={filtroFecha} onChange={(e) => setFiltroFecha(e.target.value)}>
-          <option>{FILTRO_TODOS}</option>
-          <option>{FILTRO_MES_ACTUAL}</option>
-        </select>
-      </div>
+      {activeView === "admin-reservas" && <section id="admin-reservas" className="admin-reservations-workspace" aria-label="Gestión de reservas">
+        <div className="admin-reservations-card">
+          <header className="admin-reservations-heading"><div><h3>Gestión de reservas</h3><p>Consulta, filtra y administra las reservas.</p></div><button type="button" onClick={() => navigateView("admin-calendario")}>Ver calendario</button></header>
 
-      <div className="admin-tabla-wrapper reservas-table-scroll" ref={reservasScrollRef}>
-        <table>
-          <thead>
-            <tr>
-              <th>Cliente</th>
-              <th>Celular</th>
-              <th>Cabaña</th>
-              <th>Ingreso</th>
-              <th>Salida</th>
-              <th>Noches</th>
-              <th>Adultos</th>
-              <th>Niños</th>
-              <th>Personas</th>
-              <th>Total</th>
-              <th>Anticipo</th>
-              <th>Saldo</th>
-              <th>Estado</th>
-              <th>Pago</th>
-              <th>Observaciones</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reservasFiltradas.map((r) => {
-              const esPendiente = normalizarEstado(r.estado) === "pendiente";
-              return (
-              <tr key={r.id} className={esPendiente ? "reserva-pendiente-row" : ""}>
-                <td>
-                  <span className="cliente-admin">{r.nombre}</span>
-                  {esPendiente && <span className="badge-nueva">Nueva</span>}
-                </td>
-                <td>{r.celular}</td>
-                <td>{normalizarCabana(r.cabana)}</td>
-                <td>{fechaLegible(r.fecha_ingreso)}</td>
-                <td>{fechaLegible(r.fecha_salida)}</td>
-                <td>{calcularNoches(r.fecha_ingreso, r.fecha_salida)}</td>
-                <td>{adultosReserva(r)}</td>
-                <td>{ninosReserva(r)}</td>
-                <td>{personasReserva(r)}</td>
-                <td>${formatoMoneda(valorTotal(r))}</td>
-                <td>${formatoMoneda(valorAnticipo(r))}</td>
-                <td>${formatoMoneda(valorSaldo(r))}</td>
-                <td><span className={`estado ${normalizarEstado(r.estado)}`}>{r.estado}</span></td>
-                <td>
+
+
+          <AdminReservationList reservas={reservasPagina} selectedId={selectedReservation?.id} onSelect={selectReservation} format={formatReservaUI} total={reservasFiltradas.length} page={paginaActual} pageSize={reservasPorPagina} onPageChange={cambiarPaginaReservas} onPageSizeChange={(size) => actualizarFiltro(setReservasPorPagina, size)} />
+        </div>
+        <AdminReservationDetail reserva={selectedReservation} detailRef={reservationDetailRef} format={formatReservaUI}
+          payment={selectedReservation && (() => {
+            const r = selectedReservation;
+            return <>
                   <span className={r.pago_confirmado ? "pago-ok" : "pago-pendiente"}>
                     {r.pago_confirmado ? "Confirmado" : "Pendiente"}
                   </span>
@@ -1803,18 +1685,12 @@ function Admin() {
                       )}
                     </div>
                   )}
-                </td>
-                <td>
-                  {r.observaciones?.trim() ? (
-                    <div className="observaciones-reserva-admin">
-                      <strong>Observaciones</strong>
-                      <p>{r.observaciones}</p>
-                    </div>
-                  ) : (
-                    <span className="observaciones-vacias-admin">Sin observaciones</span>
-                  )}
-                </td>
-                <td>
+
+            </>;
+          })()}
+          actions={selectedReservation && (() => {
+            const r = selectedReservation;
+            return (
                   <div className="acciones acciones-admin">
                     {puedeConfirmarPagos && <button className="btn-confirmar" onClick={() => confirmarReserva(r)} disabled={accionEnProceso === r.id}>Confirmar</button>}
                     {puedeConfirmarPagos && <button className="btn-pago" onClick={() => confirmarPago(r)} disabled={accionEnProceso === r.id}>Pago recibido</button>}
@@ -1825,12 +1701,101 @@ function Admin() {
                       {accionEnProceso === r.id ? "Procesando..." : "Eliminar"}
                     </button>
                   </div>
-                </td>
-              </tr>
-              );
-            })}
-          </tbody>
-        </table>
+            );
+          })()}
+        />
+      </section>}
+      <div className="admin-view" hidden={activeView !== "admin-calendario"}>
+      <section id="admin-calendario" className="admin-calendario-disponibilidad">
+        <div className="admin-calendario-header">
+          <div>
+            <span className="admin-calendario-kicker">Calendario</span>
+            <h3>Calendario de disponibilidad</h3>
+            <p>Consulta rápidamente qué fechas están ocupadas o disponibles por cabaña.</p>
+          </div>
+          <div className="admin-calendario-controles">
+            <button type="button" onClick={() => cambiarMesCalendario(-1)}>Anterior</button>
+            <strong>{nombreMesCalendario(mesCalendarioAdmin.year, mesCalendarioAdmin.month)}</strong>
+            <button type="button" onClick={() => cambiarMesCalendario(1)}>Siguiente</button>
+            <button type="button" onClick={volverMesActualCalendario}>Hoy</button>
+          </div>
+        </div>
+
+        <div className="admin-calendario-toolbar">
+          <div className="admin-calendario-leyenda" aria-label="Leyenda de disponibilidad">
+            <span><i className="cal-dot disponible" />Disponible</span>
+            <span><i className="cal-dot parcial" />Parcial</span>
+            <span><i className="cal-dot ocupado" />Ocupado</span>
+          </div>
+          <label className="admin-calendario-filtro">
+            Cabaña
+            <select value={filtroCabanaCalendario} onChange={(event) => setFiltroCabanaCalendario(event.target.value)}>
+              <option>{FILTRO_TODAS}</option>
+              {CABANAS.map((cabanaItem) => <option key={cabanaItem}>{cabanaItem}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="admin-calendario-layout">
+          <div className="admin-calendario-grid" aria-label="Calendario de disponibilidad mensual">
+            {["Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom"].map((dia) => (
+              <div className="admin-calendario-dia-nombre" key={dia}>{dia}</div>
+            ))}
+            {diasCalendarioAdmin.map((dia) => (
+              dia.fueraMes ? (
+                <div className="admin-calendario-dia fuera-mes" key={dia.key} aria-hidden="true" />
+              ) : (
+                <button
+                  type="button"
+                  key={dia.key}
+                  className={`admin-calendario-dia ${dia.estado} ${dia.fechaISO === fechaSeleccionadaCalendario ? "seleccionado" : ""} ${dia.fechaISO === fechaToISO(new Date()) ? "hoy" : ""}`}
+                  onClick={() => setFechaSeleccionadaCalendario(dia.fechaISO)}
+                  title={dia.cabanasFiltradas.map((item) => `${item.cabana}: ${item.ocupada ? "Ocupada" : "Disponible"}`).join(" | ")}
+                >
+                  <span className="admin-calendario-numero">{dia.day}</span>
+                  <span className="admin-calendario-estado">{dia.estado === "disponible" ? "Disponible" : dia.estado === "parcial" ? "Parcial" : "Ocupado"}</span>
+                  <strong>{dia.libres}/{dia.total} libres</strong>
+                </button>
+              )
+            ))}
+          </div>
+
+          <aside className="admin-calendario-detalle">
+            <span className={`admin-calendario-badge ${detalleDiaSeleccionado.estado}`}>
+              {detalleDiaSeleccionado.estado === "disponible" ? "Disponible" : detalleDiaSeleccionado.estado === "parcial" ? "Parcial" : "Ocupado"}
+            </span>
+            <h4>Disponibilidad del {fechaLegible(fechaSeleccionadaCalendario)}</h4>
+            <p>{detalleDiaSeleccionado.libres}/{detalleDiaSeleccionado.total} cabañas libres para nueva reserva.</p>
+            <div className="admin-calendario-cabanas">
+              {detalleDiaSeleccionado.cabanasFiltradas.map((item) => (
+                <article className={item.ocupada ? "cabana-dia ocupada" : "cabana-dia disponible"} key={item.cabana}>
+                  <strong>{item.cabana}</strong>
+                  {item.ocupada ? (
+                    <div>
+                      <span>Ocupada por: {item.reserva?.nombre || "Cliente sin nombre"}</span>
+                      <small>Ingreso: {fechaLegible(item.reserva?.fecha_ingreso)}</small>
+                      <small>Salida: {fechaLegible(item.reserva?.fecha_salida)}</small>
+                      <small>Estado: {item.reserva?.estado || "Pendiente"}</small>
+                      <small>Pago: {item.reserva?.pago_confirmado ? "Confirmado" : etiquetaEstadoPagoWompi(item.reserva?.pago_estado)}</small>
+                      <small>Observaciones: {item.reserva?.observaciones?.trim() || "Sin observaciones"}</small>
+                    </div>
+                  ) : (
+                    <span>Disponible para nueva reserva</span>
+                  )}
+                </article>
+              ))}
+            </div>
+            <button type="button" className="btn-nueva-reserva" onClick={abrirNuevaReservaDesdeCalendario}>
+              Crear reserva para esta fecha
+            </button>
+          </aside>
+        </div>
+      </section>
+      </div>
+      <div className="admin-view" hidden={activeView !== "admin-estadisticas"}>
+      <AdminStatistics reservas={reservasFiltradas} mesActual={filtroFecha === FILTRO_MES_ACTUAL} periodo={periodoLabel}
+        filtros={{ estado: filtroEstado, cabana: filtroCabana, pago: filtroPago, busqueda }} />
+
       </div>
 
       {mostrarModal && reservaEditando && (
@@ -1911,6 +1876,7 @@ function Admin() {
           </div>
         </div>
       )}
+      </main>
     </section>
   );
 }
