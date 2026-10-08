@@ -115,7 +115,7 @@ export default function PanoramicViewport({ scene, onSceneChange, focusOnMount =
             />
             {status === 'ready' && scene.hotspots.map((hotspot) => (
               <button
-                key={hotspot.target}
+                key={`${hotspot.target}-${hotspot.x}-${hotspot.y}`}
                 type="button"
                 className={`${styles.hotspot} ${hotspot.prominent ? styles.doorHotspot : ''} ${hotspot.x > 0.7 ? styles.hotspotLeft : ''}`}
                 style={{ left: `${hotspot.x * 100}%`, top: `${hotspot.y * 100}%` }}
